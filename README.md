@@ -93,6 +93,8 @@ hotel_inventario/
    cd hotel_inventario
    ```
 
+📋 **[Ver guía completa de instalación para colaboradores](INSTALACION.md)**
+
 2. **Crear y activar entorno virtual**
    ```bash
    python -m venv .venv
