@@ -1,0 +1,390 @@
+{% extends 'base.html' %}
+
+{% block title %}Alertas de Stock - Sistema de Inventario{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center fade-in-up">
+                <div>
+                    <h1 class="display-6 fw-bold mb-2">
+                        <i class="bi bi-exclamation-triangle me-3 text-warning"></i>
+                        Alertas de Stock
+                    </h1>
+                    <p class="text-muted mb-1">
+                        Productos que requieren atención inmediata
+                        {% if alertas %}
+                            • <span class="badge bg-warning">{{ alertas|length }} alerta{{ alertas|length|pluralize }}</span>
+                        {% endif %}
+                    </p>
+                    <div class="alert alert-warning alert-sm" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>¡Evita pedidos de emergencia costosos!</strong> 
+                        Estas alertas te ayudan a planificar compras y evitar gastos extra en combustible y tiempo.
+                    </div>
+                </div>
+                <div>
+                    <button class="btn btn-outline-warning btn-modern me-2" onclick="refreshAlerts()">
+                        <i class="bi bi-arrow-clockwise me-2"></i>
+                        Actualizar
+                    </button>
+                    <div class="btn-group">
+                        <button class="btn btn-warning dropdown-toggle btn-modern" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-gear me-2"></i>
+                            Acciones
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="markAllAsResolved()">
+                                <i class="bi bi-check-all me-2"></i>Marcar todas como resueltas
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="exportAlerts()">
+                                <i class="bi bi-download me-2"></i>Exportar alertas
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/admin/inventario/alertastock/">
+                                <i class="bi bi-gear me-2"></i>Configurar alertas
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if alertas %}
+        <!-- Alertas Activas -->
+        <div class="row g-4">
+            {% for alerta in alertas %}
+            <div class="col-xl-6 col-lg-6 col-md-12 fade-in-up">
+                <div class="card card-modern alert-card h-100" data-alert-id="{{ alerta.id }}">
+                    <div class="card-body">
+                        <!-- Header de la alerta -->
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="alert-icon bg-warning text-white rounded-circle d-flex align-items-center justify-content-center me-3 pulse" 
+                                     style="width: 50px; height: 50px;">
+                                    <i class="bi bi-exclamation-triangle fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="card-title mb-1">{{ alerta.producto.nombre }}</h5>
+                                    <small class="text-muted">{{ alerta.producto.codigo }} • {{ alerta.producto.categoria.nombre }}</small>
+                                </div>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="resolveAlert({{ alerta.id }})">
+                                        <i class="bi bi-check-circle me-2"></i>Marcar como resuelta
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="ignoreAlert({{ alerta.id }})">
+                                        <i class="bi bi-x-circle me-2"></i>Ignorar alerta
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'inventario:detalle_producto' alerta.producto.id %}">
+                                        <i class="bi bi-eye me-2"></i>Ver producto
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Información del área (si aplica) -->
+                        {% if alerta.area %}
+                        <div class="mb-3">
+                            <span class="badge bg-light text-dark">
+                                <i class="bi bi-geo-alt me-1"></i>
+                                {{ alerta.area.nombre }}
+                            </span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Información de stock -->
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <div class="text-center p-3 bg-light bg-opacity-50 rounded">
+                                    <div class="fs-4 fw-bold text-danger">{{ alerta.stock_actual }}</div>
+                                    <small class="text-muted">Stock Actual</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-3 bg-light bg-opacity-50 rounded">
+                                    <div class="fs-4 fw-bold text-warning">{{ alerta.stock_minimo }}</div>
+                                    <small class="text-muted">Stock Mínimo</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Barra de progreso de stock -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">Nivel de Stock</small>
+                                <small class="text-muted">
+                                    {% widthratio alerta.stock_actual alerta.stock_minimo 100 as percentage %}
+                                    {{ percentage|default:0 }}% del mínimo
+                                </small>
+                            </div>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar bg-danger" role="progressbar" 
+                                     style="width: {{ percentage|default:0 }}%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Unidad de medida -->
+                        <div class="mb-3">
+                            <small class="text-muted">
+                                <i class="bi bi-rulers me-1"></i>
+                                Unidad: {{ alerta.producto.get_unidad_medida_display }}
+                            </small>
+                        </div>
+
+                        <!-- Información temporal -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="bi bi-clock me-1"></i>
+                                    Creada: {{ alerta.fecha_creacion|date:"d/m/Y H:i" }}
+                                </small>
+                                <small class="badge bg-danger">
+                                    {{ alerta.fecha_creacion|timesince }} ago
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Acciones principales -->
+                        <div class="d-flex gap-2 mt-3">
+                            <button class="btn btn-warning btn-sm flex-grow-1" onclick="createPurchaseOrder({{ alerta.producto.id }})">
+                                <i class="bi bi-cart-plus me-1"></i>
+                                Crear Pedido
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="adjustStock({{ alerta.producto.id }})">
+                                <i class="bi bi-plus-minus me-1"></i>
+                                Ajustar
+                            </button>
+                            <button class="btn btn-success btn-sm" onclick="resolveAlert({{ alerta.id }})">
+                                <i class="bi bi-check"></i>
+                            </button>
+                        </div>
+
+                        <!-- Observaciones (si las hay) -->
+                        {% if alerta.observaciones %}
+                        <div class="mt-3 p-2 bg-light bg-opacity-50 rounded">
+                            <small class="text-muted">
+                                <i class="bi bi-chat-text me-1"></i>
+                                {{ alerta.observaciones }}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Estadísticas de alertas -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="card card-modern fade-in-up">
+                    <div class="card-header bg-transparent border-0">
+                        <h5 class="mb-0">
+                            <i class="bi bi-graph-up text-info me-2"></i>
+                            Resumen de Alertas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-number text-danger">{{ alertas|length }}</div>
+                                    <small class="text-muted">Alertas Activas</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-number text-warning">
+                                        {% for alerta in alertas %}
+                                            {% if alerta.stock_actual == 0 %}1{% endif %}
+                                        {% empty %}0{% endfor %}
+                                    </div>
+                                    <small class="text-muted">Stock Agotado</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-number text-info">
+                                        {% regroup alertas by producto.categoria as alertas_por_categoria %}
+                                        {{ alertas_por_categoria|length }}
+                                    </div>
+                                    <small class="text-muted">Categorías Afectadas</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-number text-primary">
+                                        {% for alerta in alertas %}
+                                            {% if alerta.area %}1{% endif %}
+                                        {% empty %}0{% endfor %}
+                                    </div>
+                                    <small class="text-muted">Áreas Afectadas</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <!-- Estado sin alertas -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-modern fade-in-up">
+                    <div class="card-body text-center py-5">
+                        <div class="mb-4">
+                            <i class="bi bi-check-circle text-success" style="font-size: 6rem;"></i>
+                        </div>
+                        <h2 class="text-success mb-3">¡Excelente!</h2>
+                        <h4 class="mb-3">No hay alertas de stock activas</h4>
+                        <p class="text-muted mb-4">
+                            Todos los productos tienen niveles de stock adecuados. 
+                            El sistema monitoreará automáticamente y te notificará cuando algún producto requiera atención.
+                        </p>
+                        
+                        <div class="row justify-content-center">
+                            <div class="col-md-8">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <a href="{% url 'inventario:productos' %}" class="btn btn-outline-primary btn-modern w-100">
+                                            <i class="bi bi-box-seam me-2"></i>
+                                            Ver Productos
+                                        </a>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <a href="{% url 'inventario:dashboard' %}" class="btn btn-outline-info btn-modern w-100">
+                                            <i class="bi bi-speedometer2 me-2"></i>
+                                            Dashboard
+                                        </a>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <a href="/admin/inventario/alertastock/" class="btn btn-outline-secondary btn-modern w-100">
+                                            <i class="bi bi-gear me-2"></i>
+                                            Configurar
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Función para refrescar alertas
+function refreshAlerts() {
+    const btn = event.target.closest('button');
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<span class="loading-spinner me-2"></span>Actualizando...';
+    btn.disabled = true;
+    
+    setTimeout(() => {
+        location.reload();
+    }, 1000);
+}
+
+// Función para resolver una alerta
+function resolveAlert(alertId) {
+    if (confirm('¿Estás seguro de marcar esta alerta como resuelta?')) {
+        const alertCard = document.querySelector(`[data-alert-id="${alertId}"]`);
+        alertCard.style.opacity = '0.5';
+        
+        showNotification('Alerta marcada como resuelta', 'success');
+        
+        setTimeout(() => {
+            alertCard.remove();
+            // Aquí harías la llamada AJAX real
+        }, 1000);
+    }
+}
+
+// Función para ignorar una alerta
+function ignoreAlert(alertId) {
+    if (confirm('¿Estás seguro de ignorar esta alerta?')) {
+        const alertCard = document.querySelector(`[data-alert-id="${alertId}"]`);
+        alertCard.style.opacity = '0.5';
+        
+        showNotification('Alerta ignorada', 'warning');
+        
+        setTimeout(() => {
+            alertCard.remove();
+        }, 1000);
+    }
+}
+
+// Función para marcar todas como resueltas
+function markAllAsResolved() {
+    if (confirm('¿Estás seguro de marcar TODAS las alertas como resueltas?')) {
+        const alertCards = document.querySelectorAll('.alert-card');
+        alertCards.forEach(card => {
+            card.style.opacity = '0.5';
+        });
+        
+        showNotification('Todas las alertas han sido marcadas como resueltas', 'success');
+        
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+    }
+}
+
+// Función para crear orden de compra
+function createPurchaseOrder(productId) {
+    showNotification('Redirigiendo a crear pedido...', 'info');
+    // Aquí podrías redirigir a la página de crear pedido
+    setTimeout(() => {
+        window.location.href = '/admin/pedidos/pedido/add/';
+    }, 1000);
+}
+
+// Función para ajustar stock
+function adjustStock(productId) {
+    showNotification('Función en desarrollo: Ajustar stock', 'info');
+    // Aquí implementarías un modal para ajustar stock
+}
+
+// Función para exportar alertas
+function exportAlerts() {
+    showNotification('Exportando alertas a Excel...', 'info');
+    // Implementar exportación
+}
+
+// Animaciones y efectos
+document.addEventListener('DOMContentLoaded', function() {
+    // Efecto hover en las tarjetas de alerta
+    const alertCards = document.querySelectorAll('.alert-card');
+    alertCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+            this.style.boxShadow = '0 20px 40px rgba(0,0,0,0.15)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+        });
+    });
+
+    // Auto-refresh cada 5 minutos
+    setInterval(() => {
+        console.log('Auto-checking for new alerts...');
+        // Aquí podrías hacer una llamada AJAX para verificar nuevas alertas
+    }, 300000); // 5 minutos
+});
+</script>
+{% endblock %}

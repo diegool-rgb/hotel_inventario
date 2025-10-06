@@ -1,0 +1,424 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Sistema de Inventario{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center fade-in-up">
+                <div>
+                    <h1 class="display-6 fw-bold mb-2">
+                        <i class="bi bi-speedometer2 me-3 text-primary"></i>
+                        Panel de Control
+                    </h1>
+                    <p class="text-muted mb-0">
+                        <i class="bi bi-calendar3 me-2"></i>
+                        Bienvenido, {{ user.get_full_name|default:user.username }}
+                        • {% now "l, d \d\e F \d\e Y" %}
+                    </p>
+                    <small class="text-success">
+                        <i class="bi bi-check-circle me-1"></i>
+                        Sistema centralizado - No más Excel ni confianza ciega
+                    </small>
+                </div>
+                <div>
+                    <button class="btn btn-primary btn-modern" onclick="refreshDashboard()">
+                        <i class="bi bi-arrow-clockwise me-2"></i>
+                        Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert de sistema mejorado -->
+    <div class="row mb-4">
+        <div class="col-12 fade-in-up">
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-lightbulb me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <h6 class="alert-heading mb-1">Control en Tiempo Real Activo</h6>
+                        <p class="mb-0 small">
+                            Prioridad 1 completada: Ya no necesitas Excel. El sistema detecta automáticamente stock bajo, 
+                            controla entradas/salidas y previene pedidos de emergencia costosos.
+                        </p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas principales -->
+    <div class="row g-4 mb-5">
+        <div class="col-xl-3 col-md-6 fade-in-up">
+            <div class="card card-modern card-gradient h-100">
+                <div class="card-body text-center text-white">
+                    <div class="mb-3">
+                        <i class="bi bi-box-seam" style="font-size: 3rem;"></i>
+                    </div>
+                    <div class="stat-number text-white">{{ total_productos }}</div>
+                    <h6 class="text-white-50 mb-0">Total Productos</h6>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 fade-in-up">
+            <div class="card card-modern card-gradient secondary h-100">
+                <div class="card-body text-center text-white">
+                    <div class="mb-3">
+                        <i class="bi bi-geo-alt" style="font-size: 3rem;"></i>
+                    </div>
+                    <div class="stat-number text-white">{{ total_areas }}</div>
+                    <h6 class="text-white-50 mb-0">Áreas Activas</h6>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 fade-in-up">
+            <div class="card card-modern card-gradient warning h-100">
+                <div class="card-body text-center text-white">
+                    <div class="mb-3">
+                        <i class="bi bi-tags" style="font-size: 3rem;"></i>
+                    </div>
+                    <div class="stat-number text-white">{{ total_categorias }}</div>
+                    <h6 class="text-white-50 mb-0">Categorías</h6>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 fade-in-up">
+            <div class="card card-modern card-gradient success h-100">
+                <div class="card-body text-center text-white">
+                    <div class="mb-3">
+                        <i class="bi bi-exclamation-triangle {% if alertas_activas > 0 %}pulse{% endif %}" style="font-size: 3rem;"></i>
+                    </div>
+                    <div class="stat-number text-white">{{ alertas_activas }}</div>
+                    <h6 class="text-white-50 mb-0">Alertas Activas</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accesos Rápidos por Rol -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 fade-in-up">
+            <div class="card card-modern">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people text-primary me-2"></i>
+                        Accesos Rápidos por Área de Responsabilidad
+                    </h5>
+                    <small class="text-muted">Gestión especializada según tu rol en el hotel</small>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-lg-3 col-md-6">
+                            <div class="quick-access-card text-center p-3 border rounded">
+                                <i class="bi bi-person-badge display-6 text-primary mb-2"></i>
+                                <h6 class="fw-bold">Administración General</h6>
+                                <small class="text-muted d-block mb-3">Mantención, insumos, atención huéspedes</small>
+                                <a href="{% url 'inventario:productos' %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-gear me-1"></i>Gestionar
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="quick-access-card text-center p-3 border rounded">
+                                <i class="bi bi-house-door display-6 text-success mb-2"></i>
+                                <h6 class="fw-bold">Housekeeping</h6>
+                                <small class="text-muted d-block mb-3">Amenities, frigo bar, artículos habitación</small>
+                                <a href="{% url 'inventario:productos' %}?categoria=amenities" class="btn btn-outline-success btn-sm">
+                                    <i class="bi bi-house me-1"></i>Ver Stock
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="quick-access-card text-center p-3 border rounded">
+                                <i class="bi bi-cup-hot display-6 text-warning mb-2"></i>
+                                <h6 class="fw-bold">Garzones (Seturna)</h6>
+                                <small class="text-muted d-block mb-3">Bodegas y área de restaurante</small>
+                                <a href="{% url 'inventario:productos' %}?categoria=restaurante" class="btn btn-outline-warning btn-sm">
+                                    <i class="bi bi-shop me-1"></i>Bodega
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="quick-access-card text-center p-3 border rounded">
+                                <i class="bi bi-cookie display-6 text-info mb-2"></i>
+                                <h6 class="fw-bold">Jefa A&B</h6>
+                                <small class="text-muted d-block mb-3">Insumos de cocina y abarrotes</small>
+                                <a href="{% url 'inventario:productos' %}?categoria=cocina" class="btn btn-outline-info btn-sm">
+                                    <i class="bi bi-basket me-1"></i>Cocina
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Productos con Stock Bajo -->
+        <div class="col-xl-6 fade-in-up">
+            <div class="card card-modern h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-diamond text-warning me-2"></i>
+                        Stock Bajo - ¡Evita Pedidos de Emergencia!
+                    </h5>
+                    <a href="{% url 'inventario:alertas' %}" class="btn btn-outline-warning btn-sm">
+                        Ver Todas
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if productos_stock_bajo %}
+                        <div class="list-group list-group-flush">
+                            {% for item in productos_stock_bajo %}
+                            <div class="list-group-item border-0 px-0">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ item.producto.nombre }}</h6>
+                                        <small class="text-muted">{{ item.producto.codigo }} • {{ item.producto.categoria.nombre }}</small>
+                                        <div class="progress mt-2" style="height: 6px;">
+                                            <div class="progress-bar bg-warning" role="progressbar" 
+                                                 style="width: {{ item.porcentaje }}%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-end ms-3">
+                                        <span class="badge bg-warning">{{ item.stock_actual }} / {{ item.stock_minimo }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
+                            <h6 class="mt-3 text-muted">¡Todos los productos tienen stock suficiente!</h6>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock por Área -->
+        <div class="col-xl-6 fade-in-up">
+            <div class="card card-modern h-100">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pie-chart text-primary me-2"></i>
+                        Stock por Área
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="stockChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+        <!-- Últimos Movimientos -->
+        <div class="col-xl-8 fade-in-up">
+            <div class="card card-modern">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history text-info me-2"></i>
+                        Últimos Movimientos
+                    </h5>
+                    <button class="btn btn-outline-info btn-sm" onclick="loadMoreMovements()">
+                        <i class="bi bi-arrow-repeat me-1"></i>
+                        Actualizar
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="border-0">Producto</th>
+                                    <th class="border-0">Tipo</th>
+                                    <th class="border-0">Cantidad</th>
+                                    <th class="border-0">Fecha</th>
+                                    <th class="border-0">Usuario</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for movimiento in ultimos_movimientos %}
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>{{ movimiento.producto.nombre }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ movimiento.producto.codigo }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if movimiento.tipo == 'ENTRADA' %}bg-success
+                                            {% elif movimiento.tipo == 'SALIDA' %}bg-danger
+                                            {% elif movimiento.tipo == 'TRANSFERENCIA' %}bg-primary
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ movimiento.get_tipo_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ movimiento.cantidad }}</strong>
+                                        <small class="text-muted">{{ movimiento.producto.get_unidad_medida_display }}</small>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            {{ movimiento.fecha|date:"d/m/Y" }}
+                                            <br>
+                                            <small class="text-muted">{{ movimiento.fecha|time:"H:i" }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                                 style="width: 30px; height: 30px;">
+                                                <small class="text-white">{{ movimiento.usuario.first_name.0|default:movimiento.usuario.username.0 }}</small>
+                                            </div>
+                                            <small>{{ movimiento.usuario.get_full_name|default:movimiento.usuario.username }}</small>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
+                                        <p class="text-muted mt-2">No hay movimientos recientes</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Categorías -->
+        <div class="col-xl-4 fade-in-up">
+            <div class="card card-modern h-100">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up text-success me-2"></i>
+                        Top Categorías
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for categoria in top_categorias %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-success rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 40px; height: 40px;">
+                                <i class="bi bi-tag text-white"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">{{ categoria.nombre }}</h6>
+                                <small class="text-muted">{{ categoria.total_productos }} productos</small>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-light text-dark">{{ categoria.total_productos }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-tags text-muted" style="font-size: 2rem;"></i>
+                        <p class="text-muted mt-2">No hay categorías disponibles</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfico de Stock por Área
+    const ctx = document.getElementById('stockChart').getContext('2d');
+    
+    // Datos del gráfico
+    const stockData = [
+        {% for area in stock_por_area %}
+        {
+            label: '{{ area.area.nombre }}',
+            data: {{ area.total_productos }},
+            backgroundColor: `hsl(${Math.random() * 360}, 70%, 60%)`
+        },
+        {% endfor %}
+    ];
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: stockData.map(item => item.label),
+            datasets: [{
+                data: stockData.map(item => item.data),
+                backgroundColor: stockData.map(item => item.backgroundColor),
+                borderWidth: 3,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+
+    // Animar contadores
+    const counters = document.querySelectorAll('.stat-number');
+    counters.forEach(counter => {
+        const target = parseInt(counter.textContent);
+        if (!isNaN(target)) {
+            let current = 0;
+            const increment = target / 50;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    current = target;
+                    clearInterval(timer);
+                }
+                counter.textContent = Math.floor(current);
+            }, 30);
+        }
+    });
+});
+
+// Función para refrescar dashboard
+function refreshDashboard() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="loading-spinner me-2"></span>Actualizando...';
+    btn.disabled = true;
+    
+    setTimeout(() => {
+        location.reload();
+    }, 1000);
+}
+
+// Función para cargar más movimientos
+function loadMoreMovements() {
+    showNotification('Función en desarrollo: Cargar más movimientos', 'info');
+}
+</script>
+{% endblock %}

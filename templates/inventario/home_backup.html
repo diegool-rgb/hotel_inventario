@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+
+{% block title %}Inicio - Sistema de Inventario Hotelero{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Hero Section -->
+    <section class="py-5 mb-5">
+        <div class="container">
+            <div class="row align-items-center min-vh-50">
+                <div class="col-lg-6 fade-in-up">
+                    <h1 class="display-3 fw-bold mb-4">
+                        <span class="text-primary">Sistema de</span><br>
+                        <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                            Inventario Hotelero
+                        </span>
+                    </h1>
+                    <p class="lead mb-4 text-muted">
+                        Gestiona de manera inteligente el inventario de tu hotel con nuestra plataforma moderna. 
+                        Control total de stock, alertas automáticas y reportes en tiempo real.
+                    </p>
+                    
+                    {% if not user.is_authenticated %}
+                        <div class="mb-4">
+                            <a href="{% url 'admin:login' %}" class="btn btn-primary btn-modern btn-lg me-3">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>
+                                Iniciar Sesión
+                            </a>
+                            <a href="#features" class="btn btn-outline-primary btn-modern btn-lg">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Conocer Más
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="mb-4">
+                            <a href="{% url 'inventario:dashboard' %}" class="btn btn-primary btn-modern btn-lg me-3">
+                                <i class="bi bi-speedometer2 me-2"></i>
+                                Ir al Dashboard
+                            </a>
+                            <a href="{% url 'inventario:productos' %}" class="btn btn-outline-primary btn-modern btn-lg">
+                                <i class="bi bi-box-seam me-2"></i>
+                                Ver Productos
+                            </a>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Estadísticas rápidas -->
+                    <div class="row mt-5">
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="stat-number">{{ total_productos }}</div>
+                                <small class="text-muted">Productos</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="stat-number">{{ total_areas }}</div>
+                                <small class="text-muted">Áreas</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="stat-number">24/7</div>
+                                <small class="text-muted">Monitoreo</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 fade-in-up">
+                    <div class="position-relative">
+                        <!-- Imagen/Ilustración del sistema -->
+                        <div class="card card-modern p-5 text-center" style="background: var(--gradient-primary);">
+                            <div class="mb-4">
+                                <i class="bi bi-building" style="font-size: 6rem; color: white;"></i>
+                            </div>
+                            <h3 class="text-white mb-3">Sistema Inteligente</h3>
+                            <p class="text-white-50">
+                                Controla tu inventario desde cualquier dispositivo con nuestra interfaz moderna y responsive.
+                            </p>
+                            
+                            <!-- Indicadores animados -->
+                            <div class="row mt-4">
+                                <div class="col-6">
+                                    <div class="p-3 rounded-3" style="background: rgba(255,255,255,0.1);">
+                                        <i class="bi bi-graph-up text-white fs-3"></i>
+                                        <div class="text-white mt-2">
+                                            <small>Stock en Tiempo Real</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-3 rounded-3" style="background: rgba(255,255,255,0.1);">
+                                        <i class="bi bi-bell text-white fs-3 pulse"></i>
+                                        <div class="text-white mt-2">
+                                            <small>Alertas Inteligentes</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Elementos decorativos flotantes -->
+                        <div class="position-absolute top-0 start-0 translate-middle p-3 bg-warning rounded-circle">
+                            <i class="bi bi-lightning-charge text-white"></i>
+                        </div>
+                        <div class="position-absolute bottom-0 end-0 translate-middle p-3 bg-success rounded-circle">
+                            <i class="bi bi-check-circle text-white"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-5 mb-5">
+        <div class="container">
+            <div class="text-center mb-5 fade-in-up">
+                <h2 class="display-5 fw-bold mb-3">Características Principales</h2>
+                <p class="lead text-muted">Todo lo que necesitas para gestionar tu inventario hotelero</p>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6 fade-in-up">
+                    <div class="card card-modern h-100 text-center p-4">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="bi bi-boxes icon-animated" style="font-size: 3rem; color: var(--hotel-secondary);"></i>
+                            </div>
+                            <h5 class="card-title">Control de Stock</h5>
+                            <p class="card-text text-muted">
+                                Monitorea el inventario en tiempo real por áreas: bodega, cocina, habitaciones y más.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6 fade-in-up">
+                    <div class="card card-modern h-100 text-center p-4">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="bi bi-exclamation-triangle icon-animated" style="font-size: 3rem; color: var(--hotel-warning);"></i>
+                            </div>
+                            <h5 class="card-title">Alertas Automáticas</h5>
+                            <p class="card-text text-muted">
+                                Recibe notificaciones cuando el stock esté bajo el mínimo establecido.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6 fade-in-up">
+                    <div class="card card-modern h-100 text-center p-4">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="bi bi-truck icon-animated" style="font-size: 3rem; color: var(--hotel-success);"></i>
+                            </div>
+                            <h5 class="card-title">Gestión de Pedidos</h5>
+                            <p class="card-text text-muted">
+                                Administra pedidos a proveedores con seguimiento completo de estado.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6 fade-in-up">
+                    <div class="card card-modern h-100 text-center p-4">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="bi bi-bar-chart icon-animated" style="font-size: 3rem; color: var(--hotel-accent);"></i>
+                            </div>
+                            <h5 class="card-title">Reportes Inteligentes</h5>
+                            <p class="card-text text-muted">
+                                Genera reportes detallados en PDF, Excel y CSV para casa matriz.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6 fade-in-up">
+                    <div class="card card-modern h-100 text-center p-4">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="bi bi-people icon-animated" style="font-size: 3rem; color: var(--hotel-primary);"></i>
+                            </div>
+                            <h5 class="card-title">Roles y Permisos</h5>
+                            <p class="card-text text-muted">
+                                Control granular de acceso por roles: Admin, Housekeeping, Garzones, etc.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6 fade-in-up">
+                    <div class="card card-modern h-100 text-center p-4">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="bi bi-clock-history icon-animated" style="font-size: 3rem; color: var(--hotel-secondary);"></i>
+                            </div>
+                            <h5 class="card-title">Historial Completo</h5>
+                            <p class="card-text text-muted">
+                                Trazabilidad total de todos los movimientos con auditoría completa.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {% if user.is_authenticated %}
+    <!-- Quick Actions Section -->
+    <section class="py-5">
+        <div class="container">
+            <div class="text-center mb-5 fade-in-up">
+                <h2 class="display-6 fw-bold mb-3">Acciones Rápidas</h2>
+                <p class="lead text-muted">Accede directamente a las funciones más utilizadas</p>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-lg-3 col-md-6 fade-in-up">
+                    <a href="{% url 'inventario:dashboard' %}" class="text-decoration-none">
+                        <div class="card card-modern card-gradient text-center p-4 h-100">
+                            <div class="card-body">
+                                <i class="bi bi-speedometer2 mb-3" style="font-size: 3rem;"></i>
+                                <h5>Dashboard</h5>
+                                <p class="mb-0">Vista general del sistema</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                
+                <div class="col-lg-3 col-md-6 fade-in-up">
+                    <a href="{% url 'inventario:productos' %}" class="text-decoration-none">
+                        <div class="card card-modern card-gradient secondary text-center p-4 h-100">
+                            <div class="card-body">
+                                <i class="bi bi-box-seam mb-3" style="font-size: 3rem;"></i>
+                                <h5>Productos</h5>
+                                <p class="mb-0">Gestionar inventario</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                
+                <div class="col-lg-3 col-md-6 fade-in-up">
+                    <a href="{% url 'inventario:alertas' %}" class="text-decoration-none">
+                        <div class="card card-modern card-gradient warning text-center p-4 h-100">
+                            <div class="card-body">
+                                <i class="bi bi-exclamation-triangle mb-3" style="font-size: 3rem;"></i>
+                                <h5>Alertas</h5>
+                                <p class="mb-0">Stock bajo y notificaciones</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                
+                <div class="col-lg-3 col-md-6 fade-in-up">
+                    <a href="/admin/" class="text-decoration-none">
+                        <div class="card card-modern card-gradient success text-center p-4 h-100">
+                            <div class="card-body">
+                                <i class="bi bi-gear mb-3" style="font-size: 3rem;"></i>
+                                <h5>Administración</h5>
+                                <p class="mb-0">Configuración del sistema</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animar números
+    const statNumbers = document.querySelectorAll('.stat-number');
+    statNumbers.forEach(stat => {
+        const target = parseInt(stat.textContent);
+        if (!isNaN(target)) {
+            let current = 0;
+            const increment = target / 50;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    current = target;
+                    clearInterval(timer);
+                }
+                stat.textContent = Math.floor(current);
+            }, 50);
+        }
+    });
+});
+</script>
+{% endblock %}

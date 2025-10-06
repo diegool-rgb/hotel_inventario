@@ -1,0 +1,379 @@
+{% extends 'base.html' %}
+
+{% block title %}Productos - Sistema de Inventario{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center fade-in-up">
+                <div>
+                    <h1 class="display-6 fw-bold mb-2">
+                        <i class="bi bi-box-seam me-3 text-primary"></i>
+                        Productos
+                    </h1>
+                    <p class="text-muted mb-0">Gestiona el inventario de productos del hotel</p>
+                </div>
+                <div>
+                    <a href="/admin/inventario/producto/add/" class="btn btn-success btn-modern">
+                        <i class="bi bi-plus-lg me-2"></i>
+                        Nuevo Producto
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card card-modern fade-in-up">
+                <div class="card-body">
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label for="q" class="form-label">Buscar Producto</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control" id="q" name="q" 
+                                       value="{{ busqueda|default:'' }}" 
+                                       placeholder="Código o nombre del producto...">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="categoria" class="form-label">Categoría</label>
+                            <select class="form-select" id="categoria" name="categoria">
+                                <option value="">Todas las categorías</option>
+                                {% for categoria in categorias %}
+                                <option value="{{ categoria.id }}" 
+                                        {% if categoria.id|stringformat:"s" == categoria_seleccionada %}selected{% endif %}>
+                                    {{ categoria.nombre }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary btn-modern me-2">
+                                <i class="bi bi-funnel me-2"></i>
+                                Filtrar
+                            </button>
+                            <a href="{% url 'inventario:productos' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg"></i>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-2 text-end">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-primary active" id="view-grid">
+                                    <i class="bi bi-grid-3x3-gap"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" id="view-list">
+                                    <i class="bi bi-list-ul"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vista de Tarjetas (Grid) -->
+    <div id="grid-view" class="row g-4">
+        {% for producto in productos %}
+        <div class="col-xl-3 col-lg-4 col-md-6 fade-in-up">
+            <div class="card card-modern h-100 product-card" data-product-id="{{ producto.id }}">
+                <div class="card-body">
+                    <!-- Header del producto -->
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="flex-grow-1">
+                            <h6 class="card-title mb-1">{{ producto.nombre }}</h6>
+                            <small class="text-muted">{{ producto.codigo }}</small>
+                        </div>
+                        <div class="text-end">
+                            {% if producto.tiene_stock_bajo %}
+                                <span class="badge bg-warning pulse">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i>
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Categoría -->
+                    <div class="mb-3">
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-tag me-1"></i>
+                            {{ producto.categoria.nombre }}
+                        </span>
+                    </div>
+
+                    <!-- Stock Info -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-muted">Stock Total</small>
+                            <strong class="text-primary">{{ producto.stock_total }} {{ producto.get_unidad_medida_display }}</strong>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            {% with stock_percentage=producto.stock_total|floatformat:0 min_stock=producto.stock_minimo|floatformat:0 %}
+                                {% widthratio stock_percentage min_stock 100 as percentage %}
+                                <div class="progress-bar 
+                                    {% if percentage <= 50 %}bg-danger
+                                    {% elif percentage <= 100 %}bg-warning
+                                    {% else %}bg-success{% endif %}" 
+                                     role="progressbar" style="width: {{ percentage|default:0 }}%">
+                                </div>
+                            {% endwith %}
+                        </div>
+                        <small class="text-muted">Mínimo: {{ producto.stock_minimo }} {{ producto.get_unidad_medida_display }}</small>
+                    </div>
+
+                    <!-- Precio -->
+                    {% if producto.precio_unitario %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">Precio Unitario</small>
+                            <strong class="text-success">${{ producto.precio_unitario|floatformat:0 }}</strong>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Actions -->
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'inventario:detalle_producto' producto.id %}" 
+                           class="btn btn-outline-primary btn-sm flex-grow-1">
+                            <i class="bi bi-eye me-1"></i>
+                            Ver Detalle
+                        </a>
+                        <a href="/admin/inventario/producto/{{ producto.id }}/change/" 
+                           class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card card-modern">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-search text-muted" style="font-size: 4rem;"></i>
+                    <h4 class="mt-3">No se encontraron productos</h4>
+                    <p class="text-muted">Intenta ajustar los filtros de búsqueda o crea un nuevo producto.</p>
+                    <a href="/admin/inventario/producto/add/" class="btn btn-primary btn-modern">
+                        <i class="bi bi-plus-lg me-2"></i>
+                        Crear Primer Producto
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Vista de Lista -->
+    <div id="list-view" class="d-none">
+        <div class="card card-modern fade-in-up">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0">Producto</th>
+                                <th class="border-0">Categoría</th>
+                                <th class="border-0">Stock Actual</th>
+                                <th class="border-0">Stock Mínimo</th>
+                                <th class="border-0">Estado</th>
+                                <th class="border-0">Precio</th>
+                                <th class="border-0 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for producto in productos %}
+                            <tr class="product-row" data-product-id="{{ producto.id }}">
+                                <td>
+                                    <div>
+                                        <strong>{{ producto.nombre }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ producto.codigo }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark">
+                                        {{ producto.categoria.nombre }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong class="text-primary">{{ producto.stock_total }}</strong>
+                                    <small class="text-muted">{{ producto.get_unidad_medida_display }}</small>
+                                </td>
+                                <td>
+                                    <span class="text-muted">{{ producto.stock_minimo }} {{ producto.get_unidad_medida_display }}</span>
+                                </td>
+                                <td>
+                                    {% if producto.tiene_stock_bajo %}
+                                        <span class="badge bg-warning">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>
+                                            Stock Bajo
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>
+                                            OK
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if producto.precio_unitario %}
+                                        <strong class="text-success">${{ producto.precio_unitario|floatformat:0 }}</strong>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'inventario:detalle_producto' producto.id %}" 
+                                           class="btn btn-outline-primary" title="Ver Detalle">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="/admin/inventario/producto/{{ producto.id }}/change/" 
+                                           class="btn btn-outline-secondary" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-5">
+                                    <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                                    <h5 class="mt-3">No hay productos</h5>
+                                    <p class="text-muted">Comienza agregando tu primer producto.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumen de resultados -->
+    {% if productos %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card card-modern fade-in-up">
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-number text-primary">{{ productos|length }}</div>
+                                <small class="text-muted">Productos Mostrados</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-number text-warning">
+                                    {% for producto in productos %}
+                                        {% if producto.tiene_stock_bajo %}1{% endif %}
+                                    {% empty %}0{% endfor %}
+                                </div>
+                                <small class="text-muted">Con Stock Bajo</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-number text-success">{{ categorias|length }}</div>
+                                <small class="text-muted">Categorías</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-number text-info">
+                                    {% for producto in productos %}
+                                        {% if not producto.tiene_stock_bajo %}1{% endif %}
+                                    {% empty %}0{% endfor %}
+                                </div>
+                                <small class="text-muted">Stock OK</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle entre vista de grid y lista
+    const viewGrid = document.getElementById('view-grid');
+    const viewList = document.getElementById('view-list');
+    const gridView = document.getElementById('grid-view');
+    const listView = document.getElementById('list-view');
+
+    viewGrid.addEventListener('click', function() {
+        viewGrid.classList.add('active');
+        viewList.classList.remove('active');
+        gridView.classList.remove('d-none');
+        listView.classList.add('d-none');
+        localStorage.setItem('product-view', 'grid');
+    });
+
+    viewList.addEventListener('click', function() {
+        viewList.classList.add('active');
+        viewGrid.classList.remove('active');
+        listView.classList.remove('d-none');
+        gridView.classList.add('d-none');
+        localStorage.setItem('product-view', 'list');
+    });
+
+    // Restaurar vista guardada
+    const savedView = localStorage.getItem('product-view');
+    if (savedView === 'list') {
+        viewList.click();
+    }
+
+    // Hover effects para las tarjetas
+    const productCards = document.querySelectorAll('.product-card');
+    productCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+
+    // Filtros en tiempo real
+    const searchInput = document.getElementById('q');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                // Aquí podrías implementar búsqueda AJAX en tiempo real
+                console.log('Searching for:', this.value);
+            }, 500);
+        });
+    }
+});
+
+// Función para exportar productos
+function exportProducts(format) {
+    showNotification(`Exportando productos en formato ${format.toUpperCase()}...`, 'info');
+    // Implementar exportación
+}
+</script>
+{% endblock %}

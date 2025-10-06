@@ -1,0 +1,82 @@
+# Archivos a ignorar en Git
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+
+# Variables de entorno
+.env
+.env.local
+.env.production
+
+# Base de datos
+*.sqlite3
+db.sqlite3
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Logs
+*.log
+logs/
+hotel_inventario.log
+
+# Backups
+backups/
+*.backup
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Archivos compilados
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de distribución
+build/
+dist/
+*.egg-info/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Archivos temporales
+*.tmp
+*.temp
+temp/
+
+# Archivos de media (uploads)
+media/uploads/
+
+# Configuraciones locales
+local_settings.py
+
+# Archivos de migraciones compilados
+migrations/__pycache__/
+
+# Archivos de Windows
+desktop.ini
+$RECYCLE.BIN/
+
+# Archivos de macOS
+.DS_Store
+.AppleDouble
+.LSOverride
