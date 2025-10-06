@@ -12,6 +12,7 @@ if "%1"=="shell" goto shell
 if "%1"=="migraciones" goto migraciones
 if "%1"=="backup" goto backup
 if "%1"=="logs" goto logs
+if "%1"=="git" goto git
 goto menu
 
 :menu
@@ -29,6 +30,7 @@ echo  shell        - Abrir shell de Django
 echo  migraciones  - Crear y aplicar migraciones
 echo  backup       - Crear backup de la base de datos
 echo  logs         - Ver logs del sistema
+echo  git          - Comandos Git (commit y push)
 echo  help         - Mostrar esta ayuda
 echo.
 echo Uso: comandos.bat [comando]
@@ -102,6 +104,25 @@ if exist logs\hotel_inventario.log (
 ) else (
     echo No se encontraron logs. El archivo se creará cuando ejecutes el servidor.
 )
+goto end
+
+:git
+echo ========================================
+echo  Comandos Git - Sistema de Inventario
+echo ========================================
+echo.
+set /p mensaje="Ingresa el mensaje del commit: "
+echo.
+echo Agregando archivos...
+git add .
+echo.
+echo Haciendo commit...
+git commit -m "%mensaje%"
+echo.
+echo Subiendo a GitHub...
+git push origin main
+echo.
+echo ^[32mCódigo subido exitosamente a GitHub!^[0m
 goto end
 
 :end
