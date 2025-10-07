@@ -30,45 +30,52 @@ def dashboard(request):
     total_productos = Producto.objects.filter(activo=True).count()
     total_areas = Area.objects.filter(activo=True).count()
     total_categorias = Categoria.objects.filter(activo=True).count()
-    
+
     # Alertas de stock bajo
     alertas_activas = AlertaStock.objects.filter(estado='ACTIVA').count()
-    
-    # Productos con stock bajo
+
+    # Alertas de stock bajo activas
     productos_stock_bajo = []
-    for producto in Producto.objects.filter(activo=True)[:10]:
-        if producto.tiene_stock_bajo():
-            productos_stock_bajo.append({
-                'producto': producto,
-                'stock_actual': producto.stock_total(),
-                'stock_minimo': producto.stock_minimo,
-                'porcentaje': (producto.stock_total() / producto.stock_minimo * 100) if producto.stock_minimo > 0 else 0
-            })
-    
+    for alerta in AlertaStock.objects.filter(estado='ACTIVA').select_related('producto', 'area')[:10]:
+        porcentaje = int((alerta.stock_actual / alerta.stock_minimo * 100)) if alerta.stock_minimo > 0 else 0
+        critico = porcentaje < 50
+        productos_stock_bajo.append({
+            'alerta': alerta,
+            'producto': alerta.producto,
+            'stock_actual': alerta.stock_actual,
+            'stock_minimo': alerta.stock_minimo,
+            'porcentaje': porcentaje,
+            'area': alerta.area,
+            'critico': critico,
+        })
+    # Ordenar: críticos primero, luego por porcentaje ascendente
+    productos_stock_bajo = sorted(productos_stock_bajo, key=lambda x: (0 if x['critico'] else 1, x['porcentaje']))
+
     # Últimos movimientos
     ultimos_movimientos = Movimiento.objects.select_related(
         'producto', 'area_origen', 'area_destino', 'usuario'
     ).order_by('-fecha')[:8]
-    
+
     # Stock por área
     stock_por_area = []
-    for area in Area.objects.filter(activo=True):
+    areas = Area.objects.filter(activo=True)
+    for area in areas:
         total_productos_area = area.stocks.count()
         valor_stock = area.stocks.aggregate(
             total=Sum('cantidad')
         )['total'] or Decimal('0')
-        
+
         stock_por_area.append({
             'area': area,
             'total_productos': total_productos_area,
             'valor_stock': valor_stock,
         })
-    
+
     # Top categorías por cantidad de productos
     top_categorias = Categoria.objects.filter(activo=True).annotate(
         total_productos=Count('productos')
     ).order_by('-total_productos')[:5]
-    
+
     context = {
         'total_productos': total_productos,
         'total_areas': total_areas,
@@ -78,8 +85,9 @@ def dashboard(request):
         'ultimos_movimientos': ultimos_movimientos,
         'stock_por_area': stock_por_area,
         'top_categorias': top_categorias,
+        'areas': areas,
     }
-    
+
     return render(request, 'inventario/dashboard.html', context)
 
 
@@ -87,31 +95,44 @@ def dashboard(request):
 def lista_productos(request):
     """Vista para listar productos"""
     productos = Producto.objects.select_related('categoria').filter(activo=True)
-    
+
     # Filtros
-    categoria_id = request.GET.get('categoria')
-    if categoria_id:
-        productos = productos.filter(categoria_id=categoria_id)
-    
+    area_param = request.GET.get('area')
+    area_seleccionada = None
+    if area_param:
+        try:
+            area_id = int(area_param)
+            productos = productos.filter(stocks__area_id=area_id).distinct()
+            area_seleccionada = area_id
+        except ValueError:
+            # Assume it's area name
+            productos = productos.filter(stocks__area__nombre=area_param).distinct()
+            # Find the area to set selected
+            try:
+                area_obj = Area.objects.get(nombre=area_param, activo=True)
+                area_seleccionada = area_obj.id
+            except Area.DoesNotExist:
+                pass
+
     busqueda = request.GET.get('q')
     if busqueda:
         productos = productos.filter(
-            Q(nombre__icontains=busqueda) | 
+            Q(nombre__icontains=busqueda) |
             Q(codigo__icontains=busqueda)
         )
-    
+
     # Paginación básica
     productos = productos.order_by('categoria__nombre', 'nombre')
-    
-    categorias = Categoria.objects.filter(activo=True)
-    
+
+    areas = Area.objects.filter(activo=True)
+
     context = {
         'productos': productos,
-        'categorias': categorias,
-        'categoria_seleccionada': categoria_id,
+        'areas': areas,
+        'area_seleccionada': area_seleccionada,
         'busqueda': busqueda,
     }
-    
+
     return render(request, 'inventario/productos.html', context)
 
 
@@ -138,14 +159,22 @@ def detalle_producto(request, producto_id):
 @login_required
 def alertas_stock(request):
     """Vista para mostrar alertas de stock"""
-    alertas = AlertaStock.objects.select_related(
-        'producto', 'area'
-    ).filter(estado='ACTIVA').order_by('-fecha_creacion')
-    
+    alertas_list = []
+    for alerta in AlertaStock.objects.select_related('producto', 'area').filter(estado='ACTIVA'):
+        porcentaje = (alerta.stock_actual / alerta.stock_minimo * 100) if alerta.stock_minimo > 0 else 0
+        critico = porcentaje < 50
+        alertas_list.append({
+            'alerta': alerta,
+            'porcentaje': porcentaje,
+            'critico': critico,
+        })
+    # Ordenar: críticos primero, luego por fecha descendente
+    alertas_list = sorted(alertas_list, key=lambda x: (0 if x['critico'] else 1, x['alerta'].fecha_creacion), reverse=True)
+
     context = {
-        'alertas': alertas,
+        'alertas': alertas_list,
     }
-    
+
     return render(request, 'inventario/alertas.html', context)
 
 

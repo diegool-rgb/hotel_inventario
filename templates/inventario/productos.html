@@ -44,13 +44,13 @@
                         </div>
                         
                         <div class="col-md-3">
-                            <label for="categoria" class="form-label">Categoría</label>
-                            <select class="form-select" id="categoria" name="categoria">
-                                <option value="">Todas las categorías</option>
-                                {% for categoria in categorias %}
-                                <option value="{{ categoria.id }}" 
-                                        {% if categoria.id|stringformat:"s" == categoria_seleccionada %}selected{% endif %}>
-                                    {{ categoria.nombre }}
+                            <label for="area" class="form-label">Área</label>
+                            <select class="form-select" id="area" name="area">
+                                <option value="">Todas las áreas</option>
+                                {% for area in areas %}
+                                <option value="{{ area.id }}"
+                                        {% if area.id|stringformat:"s" == area_seleccionada %}selected{% endif %}>
+                                    {{ area.nombre }}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -290,8 +290,8 @@
                         </div>
                         <div class="col-md-3">
                             <div class="stat-card">
-                                <div class="stat-number text-success">{{ categorias|length }}</div>
-                                <small class="text-muted">Categorías</small>
+                                <div class="stat-number text-success">{{ areas|length }}</div>
+                                <small class="text-muted">Áreas</small>
                             </div>
                         </div>
                         <div class="col-md-3">
