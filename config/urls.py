@@ -25,12 +25,19 @@ admin.site.site_title = "Hotel Admin"
 admin.site.index_title = "Panel de Administración"
 
 urlpatterns = [
+    # Administración
     path('admin/', admin.site.urls),
-    path('', include('inventario.urls')),
+    
+    # Autenticación (debe ir antes que las otras URLs)
+    path('auth/', include('usuarios.urls')),
+    
+    # Aplicaciones principales
+    path('', include('inventario.urls')),  # Home y dashboard
     # path('pedidos/', include('pedidos.urls')),
     # path('reportes/', include('reportes.urls')),
-    # path('usuarios/', include('usuarios.urls')),
-    path('accounts/', include('django.contrib.auth.urls')),  # Para login/logout
+    
+    # Sistema de autenticación de Django (como respaldo)
+    path('accounts/', include('django.contrib.auth.urls')),
 ]
 
 # Servir archivos estáticos en desarrollo

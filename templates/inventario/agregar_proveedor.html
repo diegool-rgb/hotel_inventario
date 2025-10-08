@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block title %}Nuevo Proveedor - Sistema de Inventario{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="display-6 fw-bold mb-2">
+                        <i class="bi bi-building-add me-3 text-success"></i>
+                        Nuevo Proveedor
+                    </h1>
+                    <p class="text-muted mb-0">Agrega un nuevo proveedor para las compras del hotel</p>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.close()">
+                        <i class="bi bi-x-circle me-2"></i>
+                        Cerrar Ventana
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card card-modern">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-badge me-2 text-primary"></i>
+                        Información del Proveedor
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <!-- Nombre del Proveedor -->
+                            <div class="col-md-8 mb-3">
+                                <label for="{{ form.nombre.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-building me-1"></i>Nombre del Proveedor *
+                                </label>
+                                {{ form.nombre }}
+                                {% if form.nombre.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.nombre.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- RUT -->
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.rut.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-card-text me-1"></i>RUT *
+                                </label>
+                                {{ form.rut }}
+                                {% if form.rut.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.rut.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Teléfono -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.telefono.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-telephone me-1"></i>Teléfono
+                                </label>
+                                {{ form.telefono }}
+                                {% if form.telefono.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.telefono.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Email -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.email.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-envelope me-1"></i>Email
+                                </label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.email.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Contacto Principal -->
+                        <div class="mb-3">
+                            <label for="{{ form.contacto.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-person me-1"></i>Contacto Principal
+                            </label>
+                            {{ form.contacto }}
+                            {% if form.contacto.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.contacto.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Nombre de la persona de contacto</div>
+                        </div>
+
+                        <!-- Dirección -->
+                        <div class="mb-4">
+                            <label for="{{ form.direccion.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-geo-alt me-1"></i>Dirección
+                            </label>
+                            {{ form.direccion }}
+                            {% if form.direccion.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.direccion.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-outline-secondary" onclick="window.close()">
+                                <i class="bi bi-x-circle me-2"></i>
+                                Cancelar
+                            </button>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle me-2"></i>
+                                Guardar Proveedor
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Información adicional -->
+            <div class="card card-modern mt-4">
+                <div class="card-body">
+                    <h6 class="text-primary mb-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Información Importante
+                    </h6>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="bi bi-check text-success me-2"></i>
+                            Los campos marcados con (*) son obligatorios
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check text-success me-2"></i>
+                            El RUT debe ser único en el sistema
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check text-success me-2"></i>
+                            Una vez creado, el proveedor estará disponible para futuras compras
+                        </li>
+                        <li>
+                            <i class="bi bi-check text-success me-2"></i>
+                            Puedes editar la información desde el panel de administración
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Si el formulario se envía correctamente, actualizar la ventana padre
+{% if messages %}
+    {% for message in messages %}
+        {% if message.tags == 'success' %}
+            if (window.opener) {
+                window.opener.location.reload();
+                window.close();
+            }
+        {% endif %}
+    {% endfor %}
+{% endif %}
+</script>
+{% endblock %}

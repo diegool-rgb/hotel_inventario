@@ -1,0 +1,306 @@
+{% extends 'base.html' %}
+
+{% block title %}Nuevo Producto - Sistema de Inventario{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="display-6 fw-bold mb-2">
+                        <i class="bi bi-plus-circle me-3 text-success"></i>
+                        Nuevo Producto
+                    </h1>
+                    <p class="text-muted mb-0">Agrega un nuevo producto al inventario del hotel</p>
+                </div>
+                <div>
+                    <a href="{% url 'inventario:productos' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>
+                        Volver a Productos
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card card-modern">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">
+                        <i class="bi bi-box-seam me-2 text-primary"></i>
+                        Información del Producto
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="row">
+                            <!-- Código del Producto -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.codigo.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-upc-scan me-1"></i>Código del Producto *
+                                </label>
+                                {{ form.codigo }}
+                                {% if form.codigo.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.codigo.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Código único del producto (ej: AME001, FRG002)</div>
+                            </div>
+
+                            <!-- Nombre del Producto -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.nombre.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-tag me-1"></i>Nombre del Producto *
+                                </label>
+                                {{ form.nombre }}
+                                {% if form.nombre.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.nombre.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Categoría -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.categoria.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-collection me-1"></i>Categoría *
+                                </label>
+                                {{ form.categoria }}
+                                {% if form.categoria.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.categoria.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Unidad de Medida -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.unidad_medida.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-rulers me-1"></i>Unidad de Medida *
+                                </label>
+                                {{ form.unidad_medida }}
+                                {% if form.unidad_medida.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.unidad_medida.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Stock Mínimo -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.stock_minimo.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-exclamation-triangle me-1 text-warning"></i>Stock Mínimo *
+                                </label>
+                                {{ form.stock_minimo }}
+                                {% if form.stock_minimo.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.stock_minimo.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Cantidad mínima antes de generar alerta</div>
+                            </div>
+
+                            <!-- Precio Unitario -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.precio_unitario.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-currency-dollar me-1"></i>Precio Unitario
+                                </label>
+                                {{ form.precio_unitario }}
+                                {% if form.precio_unitario.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.precio_unitario.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Precio de referencia (opcional)</div>
+                            </div>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="mb-4">
+                            <label for="{{ form.descripcion.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-file-text me-1"></i>Descripción
+                            </label>
+                            {{ form.descripcion }}
+                            {% if form.descripcion.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.descripcion.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Inicial y Comprobante -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card card-modern">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">
+                        <i class="bi bi-box-arrow-in-down me-2 text-success"></i>
+                        Stock Inicial y Comprobante
+                    </h5>
+                    <small class="text-muted">Opcional: Puedes registrar la primera compra de este producto</small>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Área Inicial -->
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.area_inicial.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-geo-alt me-1"></i>Área donde se guardará
+                            </label>
+                            {{ form.area_inicial }}
+                            {% if form.area_inicial.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.area_inicial.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Cantidad Inicial -->
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.cantidad_inicial.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-123 me-1"></i>Cantidad inicial
+                            </label>
+                            {{ form.cantidad_inicial }}
+                            {% if form.cantidad_inicial.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.cantidad_inicial.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Proveedor -->
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.proveedor.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-building me-1"></i>Proveedor
+                            </label>
+                            {{ form.proveedor }}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Número de Factura -->
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.numero_factura.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-receipt me-1"></i>Número Factura/Boleta
+                            </label>
+                            {{ form.numero_factura }}
+                        </div>
+
+                        <!-- Fecha de Compra -->
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.fecha_compra.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-calendar3 me-1"></i>Fecha de Compra
+                            </label>
+                            {{ form.fecha_compra }}
+                        </div>
+
+                        <!-- Comprobante -->
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.comprobante.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-camera me-1"></i>Foto de Boleta/Factura
+                            </label>
+                            {{ form.comprobante }}
+                            <div class="form-text">Opcional: Sube una foto del comprobante</div>
+                        </div>
+                    </div>
+
+                    <!-- Preview de imagen -->
+                    <div id="imagePreview" class="text-center mt-3" style="display: none;">
+                        <img id="preview" src="" alt="Preview" class="img-fluid rounded shadow" style="max-height: 200px;">
+                        <div class="mt-2">
+                            <small class="text-muted">Vista previa de la imagen</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botones -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'inventario:productos' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-2"></i>
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Crear Producto
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Información adicional -->
+            <div class="card card-modern mt-4">
+                <div class="card-body">
+                    <h6 class="text-primary mb-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        ¿Qué sucede después?
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-4 text-center mb-3">
+                            <i class="bi bi-1-circle display-6 text-primary mb-2"></i>
+                            <h6>Crear Producto</h6>
+                            <small class="text-muted">Defines la información básica</small>
+                        </div>
+                        <div class="col-md-4 text-center mb-3">
+                            <i class="bi bi-2-circle display-6 text-info mb-2"></i>
+                            <h6>Agregar Stock</h6>
+                            <small class="text-muted">Registras la compra inicial</small>
+                        </div>
+                        <div class="col-md-4 text-center mb-3">
+                            <i class="bi bi-3-circle display-6 text-success mb-2"></i>
+                            <h6>¡Listo!</h6>
+                            <small class="text-muted">El producto queda disponible</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Preview de imagen
+document.getElementById('{{ form.comprobante.id_for_label }}').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('preview').src = e.target.result;
+            document.getElementById('imagePreview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        document.getElementById('imagePreview').style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

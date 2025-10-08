@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Categoria, Area, Producto, Stock, Movimiento, AlertaStock
+from .models import (
+    Categoria, Area, Producto, Stock, Movimiento, AlertaStock,
+    Proveedor, EntradaStock, DetalleEntradaStock
+)
 
 
 @admin.register(Categoria)
@@ -113,3 +116,41 @@ class AlertaStockAdmin(admin.ModelAdmin):
         queryset.update(estado='IGNORADA', resuelto_por=request.user)
         self.message_user(request, f'{queryset.count()} alertas marcadas como ignoradas.')
     marcar_como_ignorada.short_description = 'Marcar como ignorada'
+
+
+@admin.register(Proveedor)
+class ProveedorAdmin(admin.ModelAdmin):
+    list_display = ['nombre', 'rut', 'telefono', 'email', 'contacto', 'activo', 'fecha_creacion']
+    list_filter = ['activo', 'fecha_creacion']
+    search_fields = ['nombre', 'rut', 'contacto', 'email']
+    ordering = ['nombre']
+    readonly_fields = ['fecha_creacion']
+
+
+class DetalleEntradaInline(admin.TabularInline):
+    model = DetalleEntradaStock
+    extra = 1
+    fields = ['producto', 'area_destino', 'cantidad', 'precio_unitario']
+
+
+@admin.register(EntradaStock)
+class EntradaStockAdmin(admin.ModelAdmin):
+    list_display = ['numero_entrada', 'tipo', 'proveedor', 'fecha_compra', 'total_compra', 'registrado_por', 'fecha_entrada']
+    list_filter = ['tipo', 'fecha_compra', 'fecha_entrada', 'proveedor']
+    search_fields = ['numero_entrada', 'proveedor__nombre', 'observaciones']
+    ordering = ['-fecha_entrada']
+    readonly_fields = ['fecha_entrada', 'registrado_por']
+    inlines = [DetalleEntradaInline]
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # Si es nuevo
+            obj.registrado_por = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(DetalleEntradaStock)
+class DetalleEntradaStockAdmin(admin.ModelAdmin):
+    list_display = ['entrada', 'producto', 'area_destino', 'cantidad', 'precio_unitario', 'subtotal']
+    list_filter = ['entrada__fecha_entrada', 'area_destino', 'producto__categoria']
+    search_fields = ['producto__nombre', 'producto__codigo', 'entrada__numero_entrada']
+    ordering = ['-entrada__fecha_entrada']

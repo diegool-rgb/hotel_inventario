@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+
+{% block title %}Agregar Stock - {{ producto.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="display-6 fw-bold mb-2">
+                        <i class="bi bi-box-arrow-in-down me-3 text-primary"></i>
+                        Agregar Stock
+                    </h1>
+                    <p class="text-muted mb-0">
+                        Producto: <strong>{{ producto.codigo }} - {{ producto.nombre }}</strong>
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'inventario:productos' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>
+                        Volver a Productos
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="stockForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Información de la Compra -->
+            <div class="col-lg-6 mb-4">
+                <div class="card card-modern">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">
+                            <i class="bi bi-receipt me-2 text-success"></i>
+                            Información de la Compra
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Número de Entrada -->
+                        <div class="mb-3">
+                            <label for="{{ entrada_form.numero_entrada.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-hash me-1"></i>Número de Factura/Boleta *
+                            </label>
+                            {{ entrada_form.numero_entrada }}
+                            {% if entrada_form.numero_entrada.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ entrada_form.numero_entrada.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Tipo de Entrada -->
+                        <div class="mb-3">
+                            <label for="{{ entrada_form.tipo.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-arrow-down-circle me-1"></i>Tipo de Entrada *
+                            </label>
+                            {{ entrada_form.tipo }}
+                        </div>
+
+                        <!-- Proveedor -->
+                        <div class="mb-3">
+                            <label for="{{ entrada_form.proveedor.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-building me-1"></i>Proveedor
+                            </label>
+                            <div class="input-group">
+                                {{ entrada_form.proveedor }}
+                                <a href="{% url 'inventario:agregar_proveedor' %}?producto_id={{ producto.id }}" 
+                                   class="btn btn-outline-success" target="_blank">
+                                    <i class="bi bi-plus-lg"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Fecha de Compra -->
+                        <div class="mb-3">
+                            <label for="{{ entrada_form.fecha_compra.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-calendar3 me-1"></i>Fecha de Compra *
+                            </label>
+                            {{ entrada_form.fecha_compra }}
+                        </div>
+
+                        <!-- Total de Compra -->
+                        <div class="mb-3">
+                            <label for="{{ entrada_form.total_compra.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-currency-dollar me-1"></i>Total de la Compra
+                            </label>
+                            {{ entrada_form.total_compra }}
+                            <div class="form-text">Monto total opcional</div>
+                        </div>
+
+                        <!-- Observaciones -->
+                        <div class="mb-3">
+                            <label for="{{ entrada_form.observaciones.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-chat-text me-1"></i>Observaciones
+                            </label>
+                            {{ entrada_form.observaciones }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comprobante -->
+            <div class="col-lg-6 mb-4">
+                <div class="card card-modern">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">
+                            <i class="bi bi-camera me-2 text-info"></i>
+                            Comprobante de Compra
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="{{ entrada_form.comprobante.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-image me-1"></i>Foto de Boleta/Factura
+                            </label>
+                            {{ entrada_form.comprobante }}
+                            <div class="form-text">Sube una foto de la boleta como respaldo</div>
+                        </div>
+
+                        <!-- Preview de imagen -->
+                        <div id="imagePreview" class="text-center" style="display: none;">
+                            <img id="preview" src="" alt="Preview" class="img-fluid rounded shadow" style="max-height: 300px;">
+                            <div class="mt-2">
+                                <small class="text-muted">Vista previa de la imagen</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detalles de Productos -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-modern">
+                    <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list-check me-2 text-warning"></i>
+                            Detalles de Productos
+                        </h5>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addProductForm()">
+                            <i class="bi bi-plus-lg me-1"></i>
+                            Agregar Producto
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        {{ detalle_formset.management_form }}
+                        
+                        <div id="product-forms">
+                            {% for form in detalle_formset %}
+                                <div class="product-form border rounded p-3 mb-3">
+                                    <div class="row">
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-bold">
+                                                <i class="bi bi-box me-1"></i>Producto *
+                                            </label>
+                                            {{ form.producto }}
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-bold">
+                                                <i class="bi bi-geo-alt me-1"></i>Área Destino *
+                                            </label>
+                                            {{ form.area_destino }}
+                                        </div>
+                                        <div class="col-md-2 mb-3">
+                                            <label class="form-label fw-bold">
+                                                <i class="bi bi-123 me-1"></i>Cantidad *
+                                            </label>
+                                            {{ form.cantidad }}
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-bold">
+                                                <i class="bi bi-currency-dollar me-1"></i>Precio Unitario
+                                            </label>
+                                            {{ form.precio_unitario }}
+                                        </div>
+                                        <div class="col-md-1 d-flex align-items-end mb-3">
+                                            {% if not forloop.first %}
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeProductForm(this)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {{ form.id }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'inventario:productos' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-2"></i>
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Registrar Entrada
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Preview de imagen
+document.getElementById('{{ entrada_form.comprobante.id_for_label }}').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('preview').src = e.target.result;
+            document.getElementById('imagePreview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        document.getElementById('imagePreview').style.display = 'none';
+    }
+});
+
+// Manejar formularios dinámicos
+let formCount = {{ detalle_formset.total_form_count }};
+
+function addProductForm() {
+    const formsDiv = document.getElementById('product-forms');
+    const newForm = document.querySelector('.product-form').cloneNode(true);
+    
+    // Actualizar IDs y nombres
+    newForm.innerHTML = newForm.innerHTML.replace(/detalles-\d+-/g, `detalles-${formCount}-`);
+    
+    // Limpiar valores
+    newForm.querySelectorAll('input, select').forEach(input => {
+        if (input.type !== 'hidden') {
+            input.value = '';
+        }
+    });
+    
+    // Agregar botón eliminar
+    const deleteBtn = newForm.querySelector('.col-md-1');
+    deleteBtn.innerHTML = '<button type="button" class="btn btn-outline-danger btn-sm" onclick="removeProductForm(this)"><i class="bi bi-trash"></i></button>';
+    
+    formsDiv.appendChild(newForm);
+    formCount++;
+    
+    // Actualizar total forms
+    document.getElementById('id_detalles-TOTAL_FORMS').value = formCount;
+}
+
+function removeProductForm(button) {
+    button.closest('.product-form').remove();
+    formCount--;
+    document.getElementById('id_detalles-TOTAL_FORMS').value = formCount;
+}
+</script>
+{% endblock %}

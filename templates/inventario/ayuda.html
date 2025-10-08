@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+
+{% block title %}Ayuda - Sistema de Inventario{% endblock %}
+
+{% block content %}
+<div class="container px-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <h1 class="display-5 fw-bold mb-3">
+                    <i class="bi bi-question-circle me-3 text-primary"></i>
+                    Guía Rápida del Sistema
+                </h1>
+                <p class="lead text-muted">Todo lo que necesitas saber para usar el inventario</p>
+            </div>
+
+            <!-- Sección principal: ¿Qué botón usar? -->
+            <div class="row mb-5">
+                <div class="col-12">
+                    <div class="card border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h4 class="mb-0">
+                                <i class="bi bi-lightbulb me-2"></i>
+                                ¿Qué botón debo usar?
+                            </h4>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="row g-0">
+                                <!-- Nuevo Producto -->
+                                <div class="col-md-6">
+                                    <div class="p-4 h-100 border-end">
+                                        <div class="text-center mb-4">
+                                            <div class="display-1 mb-3">🆕</div>
+                                            <h5 class="text-success">Nuevo Producto</h5>
+                                            <span class="badge bg-success">PRIMERA VEZ</span>
+                                        </div>
+                                        
+                                        <h6 class="text-success">✅ Úsalo cuando:</h6>
+                                        <ul class="list-unstyled">
+                                            <li><i class="bi bi-check-circle text-success me-2"></i>Es la primera vez que compras ese producto</li>
+                                            <li><i class="bi bi-check-circle text-success me-2"></i>No existe en tu inventario</li>
+                                            <li><i class="bi bi-check-circle text-success me-2"></i>Quieres crear un producto desde cero</li>
+                                        </ul>
+                                        
+                                        <h6 class="text-success mt-4">💡 Ejemplos:</h6>
+                                        <div class="bg-light p-3 rounded">
+                                            <small>
+                                                • "Compré shampoo coreano por primera vez"<br>
+                                                • "Necesito agregar toallas nuevas al inventario"<br>
+                                                • "Nunca he tenido este producto"
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Entrada de Stock -->
+                                <div class="col-md-6">
+                                    <div class="p-4 h-100">
+                                        <div class="text-center mb-4">
+                                            <div class="display-1 mb-3">📥</div>
+                                            <h5 class="text-warning">Entrada de Stock</h5>
+                                            <span class="badge bg-warning">RESTOCK</span>
+                                        </div>
+                                        
+                                        <h6 class="text-warning">✅ Úsalo cuando:</h6>
+                                        <ul class="list-unstyled">
+                                            <li><i class="bi bi-check-circle text-warning me-2"></i>Ya tienes ese producto</li>
+                                            <li><i class="bi bi-check-circle text-warning me-2"></i>Compraste más cantidad</li>
+                                            <li><i class="bi bi-check-circle text-warning me-2"></i>Quieres reabastecer stock</li>
+                                        </ul>
+                                        
+                                        <h6 class="text-warning mt-4">💡 Ejemplos:</h6>
+                                        <div class="bg-light p-3 rounded">
+                                            <small>
+                                                • "Ya tengo shampoo, pero compré más"<br>
+                                                • "Necesito agregar las 10 toallas que compré"<br>
+                                                • "Quiero sumar al stock que ya tengo"
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Casos específicos -->
+            <div class="row mb-5">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="mb-0">
+                                <i class="bi bi-chat-quote me-2"></i>
+                                "Acabo de comprar shampoo coreano"
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-success bg-opacity-10 rounded border border-success">
+                                        <h6 class="text-success">✅ Si es la primera vez:</h6>
+                                        <p class="mb-2">Usa <strong>"🆕 Nuevo Producto"</strong></p>
+                                        <small class="text-muted">
+                                            Porque necesitas crear el producto en el sistema por primera vez.
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-warning bg-opacity-10 rounded border border-warning">
+                                        <h6 class="text-warning">✅ Si ya lo tienes:</h6>
+                                        <p class="mb-2">Usa <strong>"📥 Entrada de Stock"</strong></p>
+                                        <small class="text-muted">
+                                            Porque solo necesitas agregar más cantidad al que ya tienes.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flujo paso a paso -->
+            <div class="row mb-5">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="mb-0">
+                                <i class="bi bi-list-ol me-2"></i>
+                                Paso a paso: ¿Cómo agregar productos?
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-success">🆕 Para producto nuevo:</h6>
+                                    <ol class="list-group list-group-numbered">
+                                        <li class="list-group-item">Ve a "Mis Productos"</li>
+                                        <li class="list-group-item">Haz clic en "🆕 Nuevo Producto"</li>
+                                        <li class="list-group-item">Llena la información básica</li>
+                                        <li class="list-group-item">Opcionalmente agrega stock inicial</li>
+                                        <li class="list-group-item">Sube foto de la boleta</li>
+                                        <li class="list-group-item">¡Guarda y listo!</li>
+                                    </ol>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-warning">📥 Para más stock:</h6>
+                                    <ol class="list-group list-group-numbered">
+                                        <li class="list-group-item">Ve a "Mis Productos"</li>
+                                        <li class="list-group-item">Haz clic en "📥 Entrada de Stock"</li>
+                                        <li class="list-group-item">Pon número de boleta y fecha</li>
+                                        <li class="list-group-item">Selecciona qué producto compraste</li>
+                                        <li class="list-group-item">Pon cuánto compraste</li>
+                                        <li class="list-group-item">Sube foto de la boleta</li>
+                                        <li class="list-group-item">¡Guarda y el stock se actualiza!</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preguntas frecuentes -->
+            <div class="row mb-5">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="mb-0">
+                                <i class="bi bi-patch-question me-2"></i>
+                                Preguntas Frecuentes
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="accordion" id="faqAccordion">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                            ¿Qué pasa si uso el botón equivocado?
+                                        </button>
+                                    </h2>
+                                    <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                                        <div class="accordion-body">
+                                            No te preocupes, no pasa nada grave. Si usas "Nuevo Producto" para algo que ya existe, simplemente tendrás dos productos similares. Puedes borrar el duplicado desde el listado.
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                            ¿Es obligatorio subir la foto de la boleta?
+                                        </button>
+                                    </h2>
+                                    <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                        <div class="accordion-body">
+                                            No, es opcional. Pero es muy recomendable porque te ayuda a tener un respaldo de tus compras para contabilidad.
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                            ¿Cómo sé si ya tengo un producto?
+                                        </button>
+                                    </h2>
+                                    <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                        <div class="accordion-body">
+                                            Ve a "Mis Productos" y busca en la lista. Si aparece ahí, ya lo tienes. Si no aparece, es nuevo.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón para volver -->
+            <div class="text-center">
+                <a href="{% url 'inventario:productos' %}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Volver a Mis Productos
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

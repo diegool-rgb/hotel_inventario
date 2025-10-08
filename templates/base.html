@@ -232,14 +232,7 @@
             }
         }
 
-        /* Dark theme support */
-        [data-bs-theme="dark"] .card-modern {
-            background: rgba(33, 37, 41, 0.9);
-        }
 
-        [data-bs-theme="dark"] .stat-card {
-            background: rgba(33, 37, 41, 0.95);
-        }
 
         /* Loading spinner */
         .loading-spinner {
@@ -255,6 +248,34 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Estilos para el dropdown del usuario */
+        .navbar-nav .dropdown-menu {
+            min-width: 180px; /* Asegurar ancho mínimo */
+            padding: 0.5rem 0;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border: none;
+        }
+
+        .navbar-nav .dropdown-item {
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            white-space: nowrap; /* Evitar que el texto se corte */
+        }
+
+        .navbar-nav .dropdown-item:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .navbar-nav .dropdown-item i {
+            width: 20px; /* Ancho fijo para íconos */
+            text-align: center;
+        }
+
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -295,27 +316,20 @@
                 
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
-                        <!-- Theme Toggle -->
-                        <li class="nav-item me-3">
-                            <button class="btn btn-outline-light btn-sm" onclick="toggleTheme()">
-                                <i class="bi bi-moon-stars" id="theme-icon"></i>
-                            </button>
-                        </li>
-                        
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle me-1"></i>
+                            <a class="nav-link dropdown-toggle px-3" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle me-2"></i>
                                 {{ user.get_full_name|default:user.username }}
                             </a>
-                            <ul class="dropdown-menu">
+                            <ul class="dropdown-menu dropdown-menu-end">
                                 <li><a class="dropdown-item" href="/admin/"><i class="bi bi-gear me-2"></i>Admin</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'admin:logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
+                                <li><a class="dropdown-item" href="{% url 'usuarios:logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
                             </ul>
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'admin:login' %}">
+                            <a class="nav-link" href="{% url 'usuarios:login' %}">
                                 <i class="bi bi-box-arrow-in-right me-1"></i>Iniciar Sesión
                             </a>
                         </li>
@@ -354,31 +368,14 @@
     <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    {% load static %}
+    <!-- Sistema JS personalizado -->
+    <script src="{% static 'js/main.js' %}"></script>
+    
     <!-- Custom JS -->
     <script>
-        // Theme toggle
-        function toggleTheme() {
-            const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-bs-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            const icon = document.getElementById('theme-icon');
-            
-            html.setAttribute('data-bs-theme', newTheme);
-            icon.className = newTheme === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
-            
-            // Guardar preferencia
-            localStorage.setItem('theme', newTheme);
-        }
-
-        // Cargar tema guardado
+        // Cargar componentes de Bootstrap
         document.addEventListener('DOMContentLoaded', function() {
-            const savedTheme = localStorage.getItem('theme');
-            const icon = document.getElementById('theme-icon');
-            
-            if (savedTheme) {
-                document.documentElement.setAttribute('data-bs-theme', savedTheme);
-                icon.className = savedTheme === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
-            }
 
             // Inicializar tooltips
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));

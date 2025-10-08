@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Sesión Cerrada - Sistema de Inventario Hotelero{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center align-items-center min-vh-100">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-success text-white text-center">
+                    <h3 class="mb-0">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Sesión Cerrada
+                    </h3>
+                </div>
+                <div class="card-body p-4 text-center">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <div class="mb-4">
+                        <i class="bi bi-box-arrow-right fa-3x text-success mb-3" style="font-size: 3rem;"></i>
+                        <h4>¡Hasta pronto!</h4>
+                        <p class="text-muted">Has cerrado sesión correctamente del sistema.</p>
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        <a href="{% url 'usuarios:login' %}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>
+                            Iniciar Sesión Nuevamente
+                        </a>
+                    </div>
+
+                    <div class="text-center">
+                        <a href="{% url 'usuarios:login' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-house me-1"></i>
+                            Ir al Login
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer text-center bg-light">
+                    <small class="text-muted">
+                        <i class="bi bi-shield-check me-1"></i>
+                        Sistema Seguro de Inventario Hotelero
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

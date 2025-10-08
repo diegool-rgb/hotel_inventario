@@ -224,3 +224,94 @@ class AlertaStock(models.Model):
     def __str__(self):
         area_text = f" en {self.area.nombre}" if self.area else ""
         return f"Alerta: {self.producto.nombre}{area_text} - Stock: {self.stock_actual}"
+
+
+class Proveedor(models.Model):
+    """Proveedores de productos"""
+    nombre = models.CharField(max_length=200)
+    rut = models.CharField(max_length=15, unique=True, help_text="RUT del proveedor")
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    direccion = models.TextField(blank=True, null=True)
+    contacto = models.CharField(max_length=100, blank=True, null=True, help_text="Nombre del contacto principal")
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Proveedor"
+        verbose_name_plural = "Proveedores"
+        ordering = ['nombre']
+    
+    def __str__(self):
+        return self.nombre
+
+
+class EntradaStock(models.Model):
+    """Registro de entradas de stock (compras)"""
+    TIPOS_ENTRADA = [
+        ('COMPRA', 'Compra'),
+        ('DONACION', 'Donación'),
+        ('AJUSTE', 'Ajuste de Inventario'),
+        ('DEVOLUCION', 'Devolución'),
+    ]
+    
+    numero_entrada = models.CharField(max_length=50, unique=True, help_text="Número de factura o documento")
+    tipo = models.CharField(max_length=20, choices=TIPOS_ENTRADA, default='COMPRA')
+    proveedor = models.ForeignKey(Proveedor, on_delete=models.PROTECT, related_name='entradas', null=True, blank=True)
+    fecha_compra = models.DateField(help_text="Fecha de la compra/factura")
+    fecha_entrada = models.DateTimeField(auto_now_add=True, help_text="Fecha de registro en el sistema")
+    comprobante = models.ImageField(
+        upload_to='comprobantes/', 
+        null=True, 
+        blank=True, 
+        help_text="Foto de la boleta/factura"
+    )
+    total_compra = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        help_text="Total de la compra (opcional)"
+    )
+    observaciones = models.TextField(blank=True, null=True)
+    registrado_por = models.ForeignKey(User, on_delete=models.PROTECT, related_name='entradas_registradas')
+    
+    class Meta:
+        verbose_name = "Entrada de Stock"
+        verbose_name_plural = "Entradas de Stock"
+        ordering = ['-fecha_entrada']
+    
+    def __str__(self):
+        return f"Entrada {self.numero_entrada} - {self.fecha_compra}"
+
+
+class DetalleEntradaStock(models.Model):
+    """Detalle de productos en cada entrada de stock"""
+    entrada = models.ForeignKey(EntradaStock, on_delete=models.CASCADE, related_name='detalles')
+    producto = models.ForeignKey(Producto, on_delete=models.PROTECT)
+    area_destino = models.ForeignKey(Area, on_delete=models.PROTECT, help_text="Área donde se almacena")
+    cantidad = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    precio_unitario = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        help_text="Precio unitario de compra"
+    )
+    
+    class Meta:
+        verbose_name = "Detalle de Entrada"
+        verbose_name_plural = "Detalles de Entrada"
+    
+    def __str__(self):
+        return f"{self.producto.nombre} - {self.cantidad} {self.producto.unidad_medida}"
+    
+    def subtotal(self):
+        """Calcula el subtotal del producto"""
+        if self.precio_unitario:
+            return self.cantidad * self.precio_unitario
+        return None

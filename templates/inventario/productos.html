@@ -16,9 +16,13 @@
                     <p class="text-muted mb-0">Gestiona el inventario de productos del hotel</p>
                 </div>
                 <div>
-                    <a href="/admin/inventario/producto/add/" class="btn btn-success btn-modern">
+                    <a href="{% url 'inventario:agregar_producto' %}" class="btn btn-success btn-modern">
                         <i class="bi bi-plus-lg me-2"></i>
                         Nuevo Producto
+                    </a>
+                    <a href="{% url 'inventario:entrada_stock' %}" class="btn btn-primary btn-modern ms-2">
+                        <i class="bi bi-box-arrow-in-down me-2"></i>
+                        Entrada de Stock
                     </a>
                 </div>
             </div>
