@@ -4,6 +4,8 @@ from django.db.models import Sum, Count, Q
 from django.http import JsonResponse
 from django.contrib import messages
 from django.db import transaction
+from django.urls import reverse
+from django.utils.http import urlencode
 from decimal import Decimal
 from datetime import date
 from .models import Producto, Stock, Movimiento, AlertaStock, Area, Categoria, Proveedor, EntradaStock, DetalleEntradaStock
@@ -441,83 +443,172 @@ def agregar_proveedor(request):
 
 @login_required
 def entrada_stock(request):
-    """Vista para registrar nueva entrada de stock"""
-    if request.method == 'POST':
-        entrada_form = EntradaStockForm(request.POST, request.FILES)
+    """Vista mejorada para registrar nueva entrada de stock con búsqueda de productos"""
+    from datetime import date
+    
+    # Obtener parámetros de búsqueda
+    busqueda = request.GET.get('q', '').strip()
+    categoria_id = request.GET.get('categoria', '')
+    area_id = request.GET.get('area', '')
+    
+    # Generar próximo número de entrada automáticamente
+    ultima_entrada_num = EntradaStock.objects.all().order_by('-id').first()
+    if ultima_entrada_num:
+        try:
+            # Extraer número de la última entrada si tiene formato numérico
+            ultimo_num = int(ultima_entrada_num.numero_entrada.split('-')[-1])
+            proximo_numero = f"ENT-{ultimo_num + 1:04d}"
+        except:
+            # Si no se puede extraer número, usar timestamp
+            from datetime import datetime
+            proximo_numero = f"ENT-{datetime.now().strftime('%m%d%H%M')}"
+    else:
+        proximo_numero = "ENT-0001"
+    
+    # Construir queryset con filtros
+    productos_query = Producto.objects.filter(activo=True).select_related('categoria')
+    
+    # Anotar con stock total
+    productos_query = productos_query.annotate(
+        stock_total=Sum('stocks__cantidad')
+    )
+    
+    # Filtrar por búsqueda
+    if busqueda:
+        productos_query = productos_query.filter(
+            Q(nombre__icontains=busqueda) |
+            Q(codigo__icontains=busqueda) |
+            Q(descripcion__icontains=busqueda)
+        )
+    
+    # Filtrar por categoría
+    if categoria_id:
+        productos_query = productos_query.filter(categoria_id=categoria_id)
+    
+    # Filtrar por área (productos que tengan stock en esa área)
+    if area_id:
+        productos_query = productos_query.filter(stocks__area_id=area_id).distinct()
+    
+    # Obtener áreas con stock para cada producto y datos inteligentes
+    productos = []
+    for producto in productos_query[:50]:  # Limitar a 50 para mejor rendimiento
+        areas_con_stock = Stock.objects.filter(
+            producto=producto,
+            cantidad__gt=0
+        ).select_related('area')
         
-        if entrada_form.is_valid():
+        # Obtener datos de la última entrada de este producto para auto-completar
+        ultima_entrada = DetalleEntradaStock.objects.filter(
+            producto=producto
+        ).select_related('entrada', 'entrada__proveedor', 'area_destino').order_by('-entrada__fecha_compra').first()
+        
+        # Agregar datos inteligentes al producto
+        if ultima_entrada:
+            producto.ultimo_proveedor = ultima_entrada.entrada.proveedor
+            producto.ultima_area_destino = ultima_entrada.area_destino
+            producto.ultimo_precio_unitario = ultima_entrada.precio_unitario
+            producto.ultima_cantidad = ultima_entrada.cantidad
+        else:
+            producto.ultimo_proveedor = None
+            producto.ultima_area_destino = None
+            producto.ultimo_precio_unitario = None
+            producto.ultima_cantidad = None
+        
+        producto.areas_con_stock = areas_con_stock
+        productos.append(producto)
+    
+    # Manejo del POST para crear entrada de stock
+    if request.method == 'POST':
+        producto_id = request.POST.get('producto_id')
+        numero_entrada = request.POST.get('numero_entrada')
+        fecha_compra = request.POST.get('fecha_compra')
+        proveedor_id = request.POST.get('proveedor')
+        total_compra = request.POST.get('total_compra')
+        area_destino_id = request.POST.get('area_destino')
+        cantidad = request.POST.get('cantidad')
+        precio_unitario = request.POST.get('precio_unitario')
+        observaciones = request.POST.get('observaciones', '')
+        comprobante = request.FILES.get('comprobante')
+        
+        if not all([producto_id, numero_entrada, fecha_compra, area_destino_id, cantidad]):
+            messages.error(request, 'Por favor completa todos los campos obligatorios.')
+        else:
             try:
                 with transaction.atomic():
                     # Crear la entrada
-                    entrada = entrada_form.save(commit=False)
-                    entrada.registrado_por = request.user
-                    entrada.save()
+                    entrada = EntradaStock.objects.create(
+                        numero_entrada=numero_entrada,
+                        fecha_compra=fecha_compra,
+                        proveedor_id=proveedor_id if proveedor_id else None,
+                        total_compra=Decimal(total_compra) if total_compra else None,
+                        observaciones=observaciones,
+                        comprobante=comprobante,
+                        registrado_por=request.user
+                    )
                     
-                    # Procesar productos de los campos dinámicos
-                    contador = 1
-                    productos_procesados = 0
+                    # Obtener producto y área
+                    producto = Producto.objects.get(id=producto_id)
+                    area = Area.objects.get(id=area_destino_id)
+                    cantidad_decimal = Decimal(cantidad)
+                    precio_decimal = Decimal(precio_unitario) if precio_unitario else None
                     
-                    while True:
-                        producto_id = request.POST.get(f'producto_{contador}')
-                        area_id = request.POST.get(f'area_{contador}')
-                        cantidad = request.POST.get(f'cantidad_{contador}')
-                        precio = request.POST.get(f'precio_{contador}')
-                        
-                        if not producto_id or not area_id or not cantidad:
-                            break
-                            
-                        producto = Producto.objects.get(id=producto_id)
-                        area = Area.objects.get(id=area_id)
-                        cantidad = Decimal(cantidad)
-                        precio_unitario = Decimal(precio) if precio else None
-                        
-                        # Crear detalle de entrada
-                        detalle = DetalleEntradaStock.objects.create(
-                            entrada=entrada,
-                            producto=producto,
-                            cantidad=cantidad,
-                            precio_unitario=precio_unitario,
-                            area_destino=area
-                        )
-                        
-                        # Actualizar o crear stock
-                        stock, created = Stock.objects.get_or_create(
-                            producto=producto,
-                            area=area,
-                            defaults={'cantidad': cantidad}
-                        )
-                        if not created:
-                            stock.cantidad += cantidad
-                            stock.save()
-                        
-                        # Crear movimiento
-                        Movimiento.objects.create(
-                            producto=producto,
-                            area=area,
-                            tipo='ENTRADA',
-                            cantidad=cantidad,
-                            usuario=request.user,
-                            observaciones=f'Entrada: {entrada.numero_entrada}'
-                        )
-                        
-                        productos_procesados += 1
-                        contador += 1
+                    # Crear detalle de entrada
+                    detalle = DetalleEntradaStock.objects.create(
+                        entrada=entrada,
+                        producto=producto,
+                        cantidad=cantidad_decimal,
+                        precio_unitario=precio_decimal,
+                        area_destino=area
+                    )
                     
-                    if productos_procesados > 0:
-                        messages.success(request, f'¡Entrada registrada exitosamente! Número: {entrada.numero_entrada}. Se procesaron {productos_procesados} productos.')
-                        return redirect('inventario:productos')
+                    # Actualizar o crear stock
+                    stock, created = Stock.objects.get_or_create(
+                        producto=producto,
+                        area=area,
+                        defaults={'cantidad': cantidad_decimal}
+                    )
+                    if not created:
+                        stock.cantidad += cantidad_decimal
+                        stock.save()
+                    
+                    # Crear movimiento
+                    Movimiento.objects.create(
+                        producto=producto,
+                        area=area,
+                        tipo='ENTRADA',
+                        cantidad=cantidad_decimal,
+                        usuario=request.user,
+                        observaciones=f'Entrada: {entrada.numero_entrada}'
+                    )
+                    
+                    messages.success(request, f'¡Stock agregado exitosamente! Entrada registrada: {entrada.numero_entrada}')
+                    # Redirigir manteniendo filtros
+                    url_params = {}
+                    if busqueda:
+                        url_params['q'] = busqueda
+                    if categoria_id:
+                        url_params['categoria'] = categoria_id
+                    if area_id:
+                        url_params['area'] = area_id
+                    
+                    if url_params:
+                        return redirect(f"{reverse('inventario:entrada_stock')}?{urlencode(url_params)}")
                     else:
-                        messages.error(request, 'No se encontraron productos para procesar.')
+                        return redirect('inventario:entrada_stock')
                         
             except Exception as e:
                 messages.error(request, f'Error al procesar la entrada: {str(e)}')
-    else:
-        entrada_form = EntradaStockForm()
     
     context = {
-        'entrada_form': entrada_form,
-        'proveedores': Proveedor.objects.filter(activo=True),
+        'productos': productos,
+        'total_productos': len(productos),
+        'busqueda': busqueda,
+        'categoria_seleccionada': int(categoria_id) if categoria_id else None,
+        'area_seleccionada': int(area_id) if area_id else None,
+        'categorias': Categoria.objects.filter(activo=True),
         'areas': Area.objects.filter(activo=True),
-        'productos': Producto.objects.filter(activo=True),
+        'proveedores': Proveedor.objects.filter(activo=True),
+        'fecha_hoy': date.today().isoformat(),
+        'proximo_numero_entrada': proximo_numero,
     }
-    return render(request, 'inventario/entrada_stock_simple.html', context)
+    return render(request, 'inventario/entrada_stock.html', context)
