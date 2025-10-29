@@ -1,4 +1,0 @@
-- [x] Modify lista_productos view in inventario/views.py to handle categoria parameter as either integer (id) or string (name)
-- [x] Test the fix by accessing /productos/?categoria=amenities
-- [x] Change filter in lista_productos from categoria to area
-- [x] Update template productos.html to use areas instead of categorias

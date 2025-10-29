@@ -1,301 +1,318 @@
 {% extends 'base.html' %}
 
-{% block title %}Entrada de Stock - Sistema de Inventario{% endblock %}
+{% block title %}Agregar Stock Fácil{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
-    <!-- Header con explicación clara -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="display-6 fw-bold mb-2">
-                        <i class="bi bi-box-arrow-in-down me-3 text-primary"></i>
-                        Entrada de Stock
-                    </h1>
-                    <p class="text-muted mb-0">Agrega más cantidad a productos que ya tienes</p>
-                </div>
-                <div>
-                    <a href="{% url 'inventario:productos' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left me-2"></i>
-                        Volver a Productos
-                    </a>
-                </div>
+<div class="container mt-4">
+    <h2 class="mb-4 text-primary">🏨 Agregar Stock al Inventario</h2>
+    
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle"></i> <strong>Instrucciones:</strong> Busca el producto, selecciónalo y completa los datos para agregar stock.
+    </div>
+
+    <!-- BÚSQUEDA -->
+    <div class="card mb-4" style="background: linear-gradient(135deg, #007bff, #0056b3); color: white;">
+        <div class="card-body">
+            <h5 class="mb-3"><i class="bi bi-search"></i> Paso 1: Buscar Producto</h5>
+            <div class="input-group">
+                <input type="text" 
+                       class="form-control form-control-lg" 
+                       id="txtBusqueda" 
+                       placeholder="Escribe el nombre del producto (ej: acondicionador, jabón...)"
+                       onkeyup="buscarProductos()"
+                       autocomplete="off">
+                <button class="btn btn-light btn-lg" type="button" onclick="buscarProductos()">
+                    <i class="bi bi-search"></i> BUSCAR
+                </button>
+            </div>
+            
+            <div id="resultadosBusqueda" 
+                 style="display: none; background: white; color: black; border-radius: 8px; margin-top: 15px; max-height: 300px; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             </div>
         </div>
     </div>
 
-    <!-- Explicación simple -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="alert alert-info">
-                <h6 class="alert-heading">
-                    <i class="bi bi-lightbulb me-2"></i>
-                    ¿Cuándo usar esta función?
-                </h6>
+    <!-- PRODUCTO SELECCIONADO -->
+    <div id="productoElegido" class="card mb-4" style="display: none; border-left: 5px solid #28a745;">
+        <div class="card-body">
+            <h5 class="text-success"><i class="bi bi-check-circle"></i> Paso 2: Producto Seleccionado</h5>
+            <div id="datosProducto" class="mt-3"></div>
+        </div>
+    </div>
+
+    <!-- FORMULARIO -->
+    <div id="formularioCompleto" class="card" style="display: none;">
+        <div class="card-body">
+            <h5 class="text-primary mb-4"><i class="bi bi-pencil"></i> Paso 3: Completar Información</h5>
+            
+            <form method="post" onsubmit="return validarDatos()">
+                {% csrf_token %}
+                <input type="hidden" id="idProducto" name="producto_id">
+                
                 <div class="row">
-                    <div class="col-md-6">
-                        <strong>✅ USA "Entrada de Stock" cuando:</strong>
-                        <ul class="mb-0 mt-2">
-                            <li>Ya tienes el producto en tu inventario</li>
-                            <li>Compraste más cantidad del mismo producto</li>
-                            <li>Quieres agregar stock a lo que ya tienes</li>
-                        </ul>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold text-primary">
+                            <i class="bi bi-plus-circle"></i> Cantidad *
+                        </label>
+                        <input type="number" 
+                               class="form-control form-control-lg" 
+                               name="cantidad" 
+                               id="inputCantidad" 
+                               min="0.01" 
+                               step="0.01" 
+                               placeholder="Ejemplo: 10" 
+                               required>
+                        <small class="text-muted">¿Cuántas unidades agregaste?</small>
                     </div>
-                    <div class="col-md-6">
-                        <strong>❌ NO uses esto para:</strong>
-                        <ul class="mb-0 mt-2">
-                            <li>Productos completamente nuevos</li>
-                            <li>Primera vez que compras algo</li>
-                            <li>Para eso usa el botón "Nuevo Producto"</li>
-                        </ul>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold text-primary">
+                            <i class="bi bi-geo-alt"></i> Área de Almacenamiento *
+                        </label>
+                        <select class="form-select form-control-lg" name="area" id="selectArea" required>
+                            <option value="">Selecciona el área</option>
+                            {% for area in areas %}
+                            <option value="{{ area.id }}">{{ area.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">¿Dónde guardaste el producto?</small>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        
-        <!-- PASO 1: Información básica de la compra -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card card-modern">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">
-                            <span class="badge bg-primary me-2">1</span>
-                            Información de tu Compra
-                        </h5>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-building"></i> Proveedor
+                        </label>
+                        <select class="form-select form-control-lg" name="proveedor" id="selectProveedor">
+                            <option value="">Sin proveedor específico</option>
+                            {% for proveedor in proveedores %}
+                            <option value="{{ proveedor.id }}">{{ proveedor.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Opcional</small>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <!-- Número de Boleta -->
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">
-                                    <i class="bi bi-receipt me-1"></i>Número de Boleta/Factura
-                                </label>
-                                {{ entrada_form.numero_entrada }}
-                                <div class="form-text">Ej: 001234, F-5678, etc.</div>
-                            </div>
-
-                            <!-- Fecha -->
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">
-                                    <i class="bi bi-calendar3 me-1"></i>¿Cuándo compraste?
-                                </label>
-                                {{ entrada_form.fecha_compra }}
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <!-- Proveedor -->
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">
-                                    <i class="bi bi-shop me-1"></i>¿En qué tienda compraste?
-                                </label>
-                                {{ entrada_form.proveedor }}
-                                <div class="form-text">Opcional: Puedes dejarlo vacío</div>
-                            </div>
-
-                            <!-- Total gastado -->
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">
-                                    <i class="bi bi-currency-dollar me-1"></i>¿Cuánto gastaste en total?
-                                </label>
-                                {{ entrada_form.total_compra }}
-                                <div class="form-text">Opcional: Solo para tus registros</div>
-                            </div>
-                        </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-cash"></i> Precio Unitario
+                        </label>
+                        <input type="number" 
+                               class="form-control form-control-lg" 
+                               name="precio" 
+                               id="inputPrecio" 
+                               min="0" 
+                               step="0.01" 
+                               placeholder="0.00">
+                        <small class="text-muted">¿Cuánto costó cada unidad? (Opcional)</small>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-calendar"></i> Fecha de Compra
+                        </label>
+                        <input type="date" 
+                               class="form-control form-control-lg" 
+                               name="fecha_compra" 
+                               id="inputFecha" 
+                               value="{{ fecha_hoy }}">
+                        <small class="text-muted">¿Cuándo compraste el producto?</small>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- PASO 2: Foto de la boleta -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card card-modern">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">
-                            <span class="badge bg-success me-2">2</span>
-                            Foto de tu Boleta (Opcional)
-                        </h5>
-                    </div>
-                    <div class="card-body text-center">
-                        <div class="mb-3">
-                            <i class="bi bi-camera display-1 text-muted mb-3"></i>
-                            <div>
-                                {{ entrada_form.comprobante }}
-                                <div class="form-text mt-2">
-                                    Saca una foto a tu boleta para tener el respaldo
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Preview de imagen -->
-                        <div id="imagePreview" class="mt-3" style="display: none;">
-                            <img id="preview" src="" alt="Preview" class="img-fluid rounded shadow" style="max-height: 200px;">
-                            <div class="mt-2">
-                                <small class="text-success">
-                                    <i class="bi bi-check-circle me-1"></i>
-                                    Imagen cargada correctamente
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PASO 3: Productos que compraste -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card card-modern">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">
-                            <span class="badge bg-warning me-2">3</span>
-                            ¿Qué productos compraste?
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="productos-container">
-                            <!-- Primer producto -->
-                            <div class="producto-item border rounded p-3 mb-3 bg-light">
-                                <h6 class="text-primary mb-3">
-                                    <i class="bi bi-box me-2"></i>
-                                    Producto #1
-                                </h6>
-                                <div class="row">
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label fw-bold">¿Qué producto?</label>
-                                        <select name="producto_1" class="form-select" required>
-                                            <option value="">👆 Selecciona el producto</option>
-                                            {% for producto in productos %}
-                                                <option value="{{ producto.id }}">{{ producto.codigo }} - {{ producto.nombre }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label fw-bold">¿Dónde lo guardaste?</label>
-                                        <select name="area_1" class="form-select" required>
-                                            <option value="">👆 Selecciona el lugar</option>
-                                            {% for area in areas %}
-                                                <option value="{{ area.id }}">{{ area.nombre }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label fw-bold">¿Cuánto compraste?</label>
-                                        <input type="number" name="cantidad_1" class="form-control" min="0.01" step="0.01" placeholder="Ej: 5" required>
-                                    </div>
-                                    <div class="col-md-2 mb-3">
-                                        <label class="form-label fw-bold">Precio c/u</label>
-                                        <input type="number" name="precio_1" class="form-control" min="0" step="0.01" placeholder="$0">
-                                        <div class="form-text">Opcional</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="text-center">
-                            <button type="button" class="btn btn-outline-primary" onclick="agregarProducto()">
-                                <i class="bi bi-plus-lg me-2"></i>
-                                Agregar Otro Producto
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Botones finales -->
-        <div class="row">
-            <div class="col-12">
-                <div class="d-flex justify-content-between">
-                    <a href="{% url 'inventario:productos' %}" class="btn btn-outline-secondary btn-lg">
-                        <i class="bi bi-x-circle me-2"></i>
-                        Cancelar
-                    </a>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-secondary btn-lg" onclick="limpiarTodo()">
+                        <i class="bi bi-arrow-counterclockwise"></i> Limpiar Todo
+                    </button>
                     <button type="submit" class="btn btn-success btn-lg">
-                        <i class="bi bi-check-circle me-2"></i>
-                        Guardar Entrada de Stock
+                        <i class="bi bi-check-circle-fill"></i> AGREGAR STOCK
                     </button>
                 </div>
-            </div>
+            </form>
         </div>
-    </form>
+    </div>
 </div>
 
 <script>
-let contadorProductos = 1;
+// Lista de productos disponibles
+var listaProductos = [
+    {% for producto in productos %}
+    {
+        id: {{ producto.id }},
+        nombre: "{{ producto.nombre|escapejs }}",
+        codigo: "{{ producto.codigo|escapejs }}",
+        categoria: "{{ producto.categoria.nombre|escapejs }}",
+        stock_actual: {{ producto.stock_total|default:0 }}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
 
-// Preview de imagen
-document.getElementById('{{ entrada_form.comprobante.id_for_label }}').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('preview').src = e.target.result;
-            document.getElementById('imagePreview').style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-    } else {
-        document.getElementById('imagePreview').style.display = 'none';
+var productoActualSeleccionado = null;
+
+// Función principal de búsqueda
+function buscarProductos() {
+    var textoBusqueda = document.getElementById('txtBusqueda').value.toLowerCase().trim();
+    var contenedorResultados = document.getElementById('resultadosBusqueda');
+    
+    // Si hay menos de 2 caracteres, ocultar resultados
+    if (textoBusqueda.length < 2) {
+        contenedorResultados.style.display = 'none';
+        return;
     }
+    
+    // Buscar productos que coincidan
+    var productosEncontrados = listaProductos.filter(function(producto) {
+        return producto.nombre.toLowerCase().includes(textoBusqueda) || 
+               producto.codigo.toLowerCase().includes(textoBusqueda) ||
+               producto.categoria.toLowerCase().includes(textoBusqueda);
+    });
+    
+    // Si no se encontraron productos
+    if (productosEncontrados.length === 0) {
+        contenedorResultados.innerHTML = '<div class="p-3 text-center text-muted"><i class="bi bi-exclamation-circle"></i><br>No se encontraron productos con ese nombre</div>';
+        contenedorResultados.style.display = 'block';
+        return;
+    }
+    
+    // Construir HTML con los resultados
+    var htmlResultados = '';
+    for (var i = 0; i < Math.min(productosEncontrados.length, 8); i++) {
+        var prod = productosEncontrados[i];
+        htmlResultados += '<div class="p-3 border-bottom" style="cursor: pointer; transition: background 0.2s;" ';
+        htmlResultados += 'onmouseover="this.style.background=\'#f8f9fa\'" ';
+        htmlResultados += 'onmouseout="this.style.background=\'white\'" ';
+        htmlResultados += 'onclick="seleccionarProducto(' + prod.id + ')">';
+        htmlResultados += '<div class="fw-bold text-dark">' + prod.nombre + '</div>';
+        htmlResultados += '<small class="text-muted">';
+        htmlResultados += '<span class="badge bg-secondary me-2">' + prod.codigo + '</span>';
+        htmlResultados += prod.categoria + ' | Stock actual: <strong>' + prod.stock_actual + '</strong> unidades';
+        htmlResultados += '</small></div>';
+    }
+    
+    contenedorResultados.innerHTML = htmlResultados;
+    contenedorResultados.style.display = 'block';
+}
+
+// Función para seleccionar un producto
+function seleccionarProducto(idProducto) {
+    // Buscar el producto en la lista
+    productoActualSeleccionado = listaProductos.find(function(p) { 
+        return p.id === idProducto; 
+    });
+    
+    if (!productoActualSeleccionado) {
+        alert('Error: No se pudo seleccionar el producto');
+        return;
+    }
+    
+    // Actualizar el campo de búsqueda
+    document.getElementById('txtBusqueda').value = productoActualSeleccionado.nombre;
+    
+    // Ocultar resultados de búsqueda
+    document.getElementById('resultadosBusqueda').style.display = 'none';
+    
+    // Mostrar información del producto seleccionado
+    document.getElementById('datosProducto').innerHTML = 
+        '<div class="row">' +
+        '<div class="col-md-4">' +
+        '<strong class="text-primary">Producto:</strong><br>' + 
+        productoActualSeleccionado.nombre + '<br>' +
+        '<small class="text-muted">Código: ' + productoActualSeleccionado.codigo + '</small>' +
+        '</div>' +
+        '<div class="col-md-4">' +
+        '<strong class="text-primary">Categoría:</strong><br>' + 
+        productoActualSeleccionado.categoria +
+        '</div>' +
+        '<div class="col-md-4">' +
+        '<strong class="text-primary">Stock Actual:</strong><br>' + 
+        '<span class="badge bg-info fs-6">' + productoActualSeleccionado.stock_actual + ' unidades</span>' +
+        '</div>' +
+        '</div>';
+    
+    document.getElementById('productoElegido').style.display = 'block';
+    
+    // Configurar formulario
+    document.getElementById('idProducto').value = productoActualSeleccionado.id;
+    document.getElementById('formularioCompleto').style.display = 'block';
+    
+    // Enfocar en el campo cantidad
+    setTimeout(function() {
+        document.getElementById('inputCantidad').focus();
+    }, 200);
+    
+    // Hacer scroll suave hacia el formulario
+    document.getElementById('formularioCompleto').scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+    });
+}
+
+// Función de validación antes de enviar
+function validarDatos() {
+    // Verificar que hay un producto seleccionado
+    if (!productoActualSeleccionado) {
+        alert('❌ Error: Debes seleccionar un producto primero');
+        document.getElementById('txtBusqueda').focus();
+        return false;
+    }
+    
+    // Verificar cantidad
+    var cantidad = document.getElementById('inputCantidad').value;
+    if (!cantidad || cantidad <= 0) {
+        alert('❌ Error: Debes ingresar una cantidad válida mayor a 0');
+        document.getElementById('inputCantidad').focus();
+        return false;
+    }
+    
+    // Verificar área
+    var area = document.getElementById('selectArea').value;
+    if (!area) {
+        alert('❌ Error: Debes seleccionar un área de almacenamiento');
+        document.getElementById('selectArea').focus();
+        return false;
+    }
+    
+    // Confirmación final
+    var areaTexto = document.getElementById('selectArea').options[document.getElementById('selectArea').selectedIndex].text;
+    var mensaje = '¿Confirmas agregar ' + cantidad + ' unidades de "' + productoActualSeleccionado.nombre + '"?\n\n';
+    mensaje += 'Área: ' + areaTexto;
+    
+    var precio = document.getElementById('inputPrecio').value;
+    if (precio && precio > 0) {
+        mensaje += '\nPrecio: $' + precio;
+    }
+    
+    return confirm(mensaje);
+}
+
+// Función para limpiar todo el formulario
+function limpiarTodo() {
+    document.getElementById('txtBusqueda').value = '';
+    document.getElementById('resultadosBusqueda').style.display = 'none';
+    document.getElementById('productoElegido').style.display = 'none';
+    document.getElementById('formularioCompleto').style.display = 'none';
+    
+    // Resetear formulario
+    document.querySelector('form').reset();
+    document.getElementById('inputFecha').value = '{{ fecha_hoy }}';
+    
+    productoActualSeleccionado = null;
+    document.getElementById('txtBusqueda').focus();
+}
+
+// Configurar eventos al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus en el campo de búsqueda
+    document.getElementById('txtBusqueda').focus();
+    
+    // Buscar mientras se escribe
+    document.getElementById('txtBusqueda').addEventListener('input', buscarProductos);
+    
+    // Buscar al presionar Enter
+    document.getElementById('txtBusqueda').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            buscarProductos();
+        }
+    });
 });
-
-// Agregar más productos
-function agregarProducto() {
-    contadorProductos++;
-    const container = document.getElementById('productos-container');
-    const nuevoProducto = document.createElement('div');
-    nuevoProducto.className = 'producto-item border rounded p-3 mb-3 bg-light';
-    nuevoProducto.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="text-primary mb-0">
-                <i class="bi bi-box me-2"></i>
-                Producto #${contadorProductos}
-            </h6>
-            <button type="button" class="btn btn-outline-danger btn-sm" onclick="eliminarProducto(this)">
-                <i class="bi bi-trash"></i> Quitar
-            </button>
-        </div>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label class="form-label fw-bold">¿Qué producto?</label>
-                <select name="producto_${contadorProductos}" class="form-select" required>
-                    <option value="">👆 Selecciona el producto</option>
-                    {% for producto in productos %}
-                        <option value="{{ producto.id }}">{{ producto.codigo }} - {{ producto.nombre }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3 mb-3">
-                <label class="form-label fw-bold">¿Dónde lo guardaste?</label>
-                <select name="area_${contadorProductos}" class="form-select" required>
-                    <option value="">👆 Selecciona el lugar</option>
-                    {% for area in areas %}
-                        <option value="{{ area.id }}">{{ area.nombre }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3 mb-3">
-                <label class="form-label fw-bold">¿Cuánto compraste?</label>
-                <input type="number" name="cantidad_${contadorProductos}" class="form-control" min="0.01" step="0.01" placeholder="Ej: 5" required>
-            </div>
-            <div class="col-md-2 mb-3">
-                <label class="form-label fw-bold">Precio c/u</label>
-                <input type="number" name="precio_${contadorProductos}" class="form-control" min="0" step="0.01" placeholder="$0">
-                <div class="form-text">Opcional</div>
-            </div>
-        </div>
-    `;
-    container.appendChild(nuevoProducto);
-}
-
-function eliminarProducto(button) {
-    button.closest('.producto-item').remove();
-}
 </script>
 {% endblock %}

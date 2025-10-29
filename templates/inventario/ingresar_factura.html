@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}Ingresar Factura{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+  <div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+      <div>
+        <h1 class="display-6 fw-bold mb-2">
+          <i class="bi bi-receipt me-3 text-primary"></i>
+          Ingresar Factura / Boleta
+        </h1>
+        <p class="text-muted mb-0">Registra una compra con uno o más productos.</p>
+      </div>
+      <div>
+        <a href="{% url 'inventario:productos' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-2"></i>Volver a Productos
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" id="facturaForm" data-auto-save>
+    {% csrf_token %}
+
+    <div class="row">
+      <div class="col-lg-6 mb-4">
+        <div class="card card-modern">
+          <div class="card-header bg-transparent"><h5 class="mb-0"><i class="bi bi-info-circle me-2 text-success"></i>Datos de la Factura</h5></div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold"><i class="bi bi-hash me-1"></i>Número (opcional)</label>
+              {{ entrada_form.numero_entrada }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold"><i class="bi bi-building me-1"></i>Proveedor</label>
+              {{ entrada_form.proveedor }}
+              <div class="form-text">Se sugerirá automáticamente según el producto y área.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold"><i class="bi bi-calendar3 me-1"></i>Fecha de Compra</label>
+              {{ entrada_form.fecha_compra }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold"><i class="bi bi-currency-dollar me-1"></i>Total (opcional)</label>
+              {{ entrada_form.total_compra }}
+              <div class="form-text">Se calcula automáticamente con las líneas; puedes ajustarlo si necesitas.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold"><i class="bi bi-chat-text me-1"></i>Observaciones</label>
+              {{ entrada_form.observaciones }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold"><i class="bi bi-image me-1"></i>Foto de Comprobante (opcional)</label>
+              {{ entrada_form.comprobante }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6 mb-4">
+        <div class="alert alert-info">
+          <div class="d-flex align-items-start">
+            <i class="bi bi-lightbulb me-2"></i>
+            <div>
+              <strong>Identificación opcional:</strong> Si no tienes número de factura, lo generamos automáticamente.
+              <br>
+              <strong>Proveedor sugerido:</strong> al elegir producto y área, mostraremos los proveedores más usados.
+              <br>
+              <strong>¿Nuevo producto o factura?</strong> "Nuevo Producto" crea un producto que no existe aún. "Ingresar Factura" registra una compra con productos ya existentes.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-12">
+        <div class="card card-modern">
+          <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-list-check me-2 text-warning"></i>Productos de la Factura</h5>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addLine()">
+              <i class="bi bi-plus-lg me-1"></i>Agregar Producto
+            </button>
+          </div>
+          <div class="card-body">
+            {{ detalle_formset.management_form }}
+            <div id="lines">
+              {% for form in detalle_formset %}
+              <div class="line border rounded p-3 mb-3">
+                <div class="row g-3 align-items-end">
+                  <div class="col-md-4">
+                    <label class="form-label fw-bold"><i class="bi bi-box me-1"></i>Producto *</label>
+                    {{ form.producto }}
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label fw-bold"><i class="bi bi-geo-alt me-1"></i>Área *</label>
+                    {{ form.area_destino }}
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label fw-bold"><i class="bi bi-123 me-1"></i>Cantidad *</label>
+                    {{ form.cantidad }}
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label fw-bold"><i class="bi bi-currency-dollar me-1"></i>Precio</label>
+                    {{ form.precio_unitario }}
+                  </div>
+                  <div class="col-md-1">
+                    <button type="button" class="btn btn-outline-danger btn-remove-line" onclick="removeLine(this)" title="Eliminar línea"><i class="bi bi-trash"></i></button>
+                  </div>
+                </div>
+                <div class="mt-2 small text-muted sugerencias">
+                  <i class="bi bi-lightning me-1"></i>
+                  Proveedores sugeridos: <span class="lista-sugeridos">—</span>
+                </div>
+                {{ form.id }}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mt-4">
+      <div class="col-12 d-flex justify-content-between">
+        <a href="{% url 'inventario:productos' %}" class="btn btn-outline-secondary"><i class="bi bi-x-circle me-2"></i>Cancelar</a>
+        <button type="submit" class="btn btn-success btn-lg"><i class="bi bi-check-circle me-2"></i>Registrar Factura</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+let total = {{ detalle_formset.total_form_count }};
+function recalcTotal(){
+  let sum = 0;
+  document.querySelectorAll('#lines .line').forEach(line=>{
+    const qty = parseFloat(line.querySelector('input[name$="-cantidad"]').value||'0');
+    const price = parseFloat(line.querySelector('input[name$="-precio_unitario"]').value||'0');
+    if(!isNaN(qty) && !isNaN(price)) sum += qty*price;
+  });
+  const totalInput = document.getElementById('id_total_compra');
+  if(totalInput){ totalInput.value = sum ? sum.toFixed(2) : ''; }
+}
+function addLine(){
+  const cont = document.getElementById('lines');
+  const first = document.querySelector('.line');
+  const clone = first.cloneNode(true);
+  clone.innerHTML = clone.innerHTML.replace(/detalles-\d+-/g, `detalles-${total}-`);
+  clone.querySelectorAll('input, select').forEach(el=>{ if(el.type!=='hidden'){ el.value=''; }});
+  cont.appendChild(clone);
+  total++;
+  document.getElementById('id_detalles-TOTAL_FORMS').value = total;
+  hookLine(clone);
+  recalcTotal();
+  updateRemoveButtons();
+}
+function removeLine(btn){
+  const line = btn.closest('.line');
+  const lines = document.querySelectorAll('#lines .line');
+  if(lines.length <= 1){ return; }
+  line.remove();
+  total--; document.getElementById('id_detalles-TOTAL_FORMS').value = total;
+  recalcTotal();
+  updateRemoveButtons();
+}
+
+function hookLine(line){
+  const prodSel = line.querySelector('select[name$="-producto"]');
+  const areaSel = line.querySelector('select[name$="-area_destino"]');
+  const out = line.querySelector('.lista-sugeridos');
+  const qtyInput = line.querySelector('input[name$="-cantidad"]');
+  const priceInput = line.querySelector('input[name$="-precio_unitario"]');
+  async function updateSug(){
+    const pid = prodSel.value; const aid = areaSel.value;
+    if(!pid){ out.textContent = '—'; return; }
+    try{
+      const params = new URLSearchParams({producto_id: pid});
+      if(aid) params.append('area_id', aid);
+      const res = await fetch(`{% url 'inventario:proveedores_sugeridos' %}?`+params.toString());
+      const data = await res.json();
+      if(data.success && data.sugeridos.length){
+        out.textContent = data.sugeridos.map(s=>`${s.nombre}${s.veces?` (x${s.veces})`:''}`).join(', ');
+        // Si hay uno solo, autoseleccionar en cabecera
+        if(data.sugeridos.length===1){
+          const provSelect = document.getElementById('id_proveedor');
+          if(provSelect){ provSelect.value = data.sugeridos[0].id; }
+        }
+        // Prefill precio con último precio conocido si el campo está vacío
+        const firstWithPrice = data.sugeridos.find(s=>s.ultimo_precio!==null && s.ultimo_precio!==undefined);
+        if(firstWithPrice && priceInput && !priceInput.value){
+          priceInput.value = firstWithPrice.ultimo_precio;
+          recalcTotal();
+        }
+      } else {
+        out.textContent = '—';
+      }
+    }catch(e){ out.textContent = '—'; }
+  }
+  prodSel.addEventListener('change', updateSug);
+  areaSel.addEventListener('change', updateSug);
+  qtyInput && qtyInput.addEventListener('input', recalcTotal);
+  priceInput && priceInput.addEventListener('input', recalcTotal);
+}
+
+// Hook existentes
+Array.from(document.querySelectorAll('.line')).forEach(hookLine);
+// Calcular total inicial por si hay valores iniciales
+recalcTotal();
+function updateRemoveButtons(){
+  const lines = document.querySelectorAll('#lines .line');
+  const onlyOne = lines.length <= 1;
+  document.querySelectorAll('#lines .btn-remove-line').forEach(btn=>{
+    btn.disabled = onlyOne;
+    btn.classList.toggle('disabled', onlyOne);
+    btn.title = onlyOne ? 'Debe haber al menos un producto' : 'Eliminar línea';
+  });
+}
+updateRemoveButtons();
+</script>
+{% endblock %}

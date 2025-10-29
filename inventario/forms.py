@@ -133,7 +133,8 @@ class EntradaStockForm(forms.ModelForm):
             }),
             'comprobante': forms.FileInput(attrs={
                 'class': 'form-control',
-                'accept': 'image/*'
+                'accept': 'image/*',
+                'capture': 'environment'
             }),
             'total_compra': forms.NumberInput(attrs={
                 'class': 'form-control',

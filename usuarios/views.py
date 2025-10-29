@@ -27,9 +27,13 @@ def login_view(request):
 
 def logout_view(request):
     """Vista de logout personalizada"""
-    if request.user.is_authenticated:
-        username = request.user.username
-        logout(request)
-        messages.success(request, f'¡Hasta pronto {username}! Has cerrado sesión correctamente.')
+    if request.method == 'POST' or request.method == 'GET':
+        if request.user.is_authenticated:
+            username = request.user.username
+            logout(request)
+            messages.success(request, f'¡Hasta pronto {username}! Has cerrado sesión correctamente.')
+        
+        # Redirigir al home después del logout
+        return redirect('inventario:home')
     
-    return render(request, 'registration/logged_out.html')
+    return redirect('inventario:home')

@@ -27,66 +27,75 @@ def home(request):
 @login_required
 def dashboard(request):
     """Vista principal del dashboard"""
+    from django.utils import timezone
+    from datetime import timedelta
+    
     # Estadísticas generales
     total_productos = Producto.objects.filter(activo=True).count()
-    total_areas = Area.objects.filter(activo=True).count()
     total_categorias = Categoria.objects.filter(activo=True).count()
-
-    # Alertas de stock bajo
-    alertas_activas = AlertaStock.objects.filter(estado='ACTIVA').count()
-
-    # Alertas de stock bajo activas
-    productos_stock_bajo = []
-    for alerta in AlertaStock.objects.filter(estado='ACTIVA').select_related('producto', 'area')[:10]:
-        porcentaje = int((alerta.stock_actual / alerta.stock_minimo * 100)) if alerta.stock_minimo > 0 else 0
-        critico = porcentaje < 50
-        productos_stock_bajo.append({
-            'alerta': alerta,
-            'producto': alerta.producto,
-            'stock_actual': alerta.stock_actual,
-            'stock_minimo': alerta.stock_minimo,
-            'porcentaje': porcentaje,
-            'area': alerta.area,
-            'critico': critico,
-        })
-    # Ordenar: críticos primero, luego por porcentaje ascendente
-    productos_stock_bajo = sorted(productos_stock_bajo, key=lambda x: (0 if x['critico'] else 1, x['porcentaje']))
-
-    # Últimos movimientos
-    ultimos_movimientos = Movimiento.objects.select_related(
-        'producto', 'area_origen', 'area_destino', 'usuario'
-    ).order_by('-fecha')[:8]
-
-    # Stock por área
-    stock_por_area = []
-    areas = Area.objects.filter(activo=True)
-    for area in areas:
-        total_productos_area = area.stocks.count()
-        valor_stock = area.stocks.aggregate(
-            total=Sum('cantidad')
-        )['total'] or Decimal('0')
-
-        stock_por_area.append({
-            'area': area,
-            'total_productos': total_productos_area,
-            'valor_stock': valor_stock,
-        })
-
-    # Top categorías por cantidad de productos
-    top_categorias = Categoria.objects.filter(activo=True).annotate(
-        total_productos=Count('productos')
-    ).order_by('-total_productos')[:5]
+    
+    # Calcular productos con stock bajo
+    productos_bajo_stock = []
+    productos_con_stock = Producto.objects.filter(activo=True).prefetch_related('stocks')
+    
+    for producto in productos_con_stock:
+        stock_total = producto.stock_total()
+        if stock_total <= producto.stock_minimo:
+            productos_bajo_stock.append(producto)
+    
+    # Movimientos recientes (últimos 7 días o últimos 10)
+    fecha_limite = timezone.now() - timedelta(days=7)
+    movimientos_recientes = Movimiento.objects.select_related(
+        'producto', 'usuario'
+    ).filter(
+        fecha__gte=fecha_limite
+    ).order_by('-fecha')[:10]
+    
+    # Si no hay movimientos recientes, tomar los últimos 10
+    if not movimientos_recientes:
+        movimientos_recientes = Movimiento.objects.select_related(
+            'producto', 'usuario'
+        ).order_by('-fecha')[:10]
+    
+    # Movimientos del día de hoy
+    hoy = timezone.now().date()
+    movimientos_hoy = Movimiento.objects.filter(
+        fecha__date=hoy
+    ).count()
+    
+    # Productos por categoría
+    productos_por_categoria = Categoria.objects.filter(activo=True).annotate(
+        total=Count('productos', filter=Q(productos__activo=True))
+    ).order_by('-total')[:5]
+    
+    # Calcular porcentajes para las categorías
+    for categoria in productos_por_categoria:
+        if total_productos > 0:
+            categoria.porcentaje = (categoria.total * 100) / total_productos
+        else:
+            categoria.porcentaje = 0
+    
+    # Valor total del inventario (solo productos con precio)
+    valor_inventario = Decimal('0')
+    for producto in productos_con_stock:
+        if producto.precio_unitario:
+            valor_inventario += producto.stock_total() * producto.precio_unitario
+    
+    # Preparar estadísticas para el template
+    stats = {
+        'total_productos': total_productos,
+        'productos_bajo_stock': len(productos_bajo_stock),
+        'movimientos_hoy': movimientos_hoy,
+        'valor_inventario': valor_inventario,
+    }
 
     context = {
+        'stats': stats,
+        'productos_bajo_stock': productos_bajo_stock[:10],  # Solo mostrar 10
+        'movimientos_recientes': movimientos_recientes,
+        'productos_por_categoria': productos_por_categoria,
         'total_productos': total_productos,
-        'total_areas': total_areas,
         'total_categorias': total_categorias,
-        'alertas_activas': alertas_activas,
-        'productos_stock_bajo': productos_stock_bajo,
-        'ultimos_movimientos': ultimos_movimientos,
-        'stock_por_area': stock_por_area,
-        'top_categorias': top_categorias,
-        'areas': areas,
     }
 
     return render(request, 'inventario/dashboard.html', context)
@@ -169,9 +178,18 @@ def lista_productos(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Agregar información de áreas con stock para cada producto
+    # Agregar información de áreas con stock y recalcular stock total para evitar valores desactualizados
     productos_con_areas = []
     for producto in page_obj:
+        # Recalcular el stock total desde la base de datos (evita depender solo de la anotación)
+        try:
+            producto.stock_total = producto.stock_total()
+        except TypeError:
+            # Si existe colisión de nombre entre método y anotación, garantizamos el valor correcto
+            producto.stock_total = producto.__class__.objects.filter(id=producto.id).aggregate(
+                total=Sum('stocks__cantidad')
+            )['total'] or 0
+
         areas_con_stock = producto.stocks.filter(cantidad__gt=0).values('area__nombre', 'cantidad')
         producto.areas_con_stock = areas_con_stock
         productos_con_areas.append(producto)
@@ -387,12 +405,14 @@ def agregar_stock(request, producto_id):
                                 stock.cantidad += detalle.cantidad
                                 stock.save()
                             
-                            # Crear movimiento
+                            # Crear movimiento (entrada por compra)
                             Movimiento.objects.create(
                                 producto=detalle.producto,
-                                area=detalle.area_destino,
+                                area_destino=detalle.area_destino,
                                 tipo='ENTRADA',
+                                motivo='COMPRA',
                                 cantidad=detalle.cantidad,
+                                precio_unitario=detalle.precio_unitario,
                                 usuario=request.user,
                                 observaciones=f'Entrada: {entrada.numero_entrada}'
                             )
@@ -439,6 +459,153 @@ def agregar_proveedor(request):
         'producto_id': request.GET.get('producto_id'),
     }
     return render(request, 'inventario/agregar_proveedor.html', context)
+
+
+@login_required
+def ingresar_factura(request):
+    """Registrar una factura/boleta con uno o más productos (detalle múltiple)."""
+    from datetime import date, datetime
+
+    # Autogenerar número si el usuario lo deja vacío (opcional)
+    def generar_numero():
+        ultima = EntradaStock.objects.order_by('-id').first()
+        if ultima and ultima.numero_entrada and ultima.numero_entrada.startswith('FAC-'):
+            try:
+                n = int(ultima.numero_entrada.split('-')[-1])
+                return f"FAC-{n+1:04d}"
+            except Exception:
+                pass
+        return f"FAC-{datetime.now().strftime('%m%d%H%M')}"
+
+    if request.method == 'POST':
+        entrada_form = EntradaStockForm(request.POST, request.FILES)
+        detalle_formset = DetalleEntradaFormSet(request.POST, prefix='detalles')
+
+        if entrada_form.is_valid() and detalle_formset.is_valid():
+            try:
+                with transaction.atomic():
+                    entrada: EntradaStock = entrada_form.save(commit=False)
+                    # Si no viene número, autogenerar
+                    if not entrada.numero_entrada:
+                        entrada.numero_entrada = generar_numero()
+                    entrada.registrado_por = request.user
+                    entrada.save()
+
+                    # Procesar detalles
+                    for form in detalle_formset:
+                        if form.cleaned_data and not form.cleaned_data.get('DELETE'):
+                            detalle = form.save(commit=False)
+                            detalle.entrada = entrada
+                            detalle.save()
+
+                            # Actualizar o crear stock
+                            stock, created = Stock.objects.get_or_create(
+                                producto=detalle.producto,
+                                area=detalle.area_destino,
+                                defaults={'cantidad': detalle.cantidad}
+                            )
+                            if not created:
+                                stock.cantidad += detalle.cantidad
+                                stock.save()
+
+                            # Crear movimiento enlazado a la factura
+                            mov = Movimiento.objects.create(
+                                producto=detalle.producto,
+                                area_destino=detalle.area_destino,
+                                tipo='ENTRADA',
+                                motivo='COMPRA',
+                                cantidad=detalle.cantidad,
+                                precio_unitario=detalle.precio_unitario,
+                                usuario=request.user,
+                                observaciones=f'Entrada factura: {entrada.numero_entrada}'
+                            )
+                            # Enlaces de trazabilidad
+                            mov.entrada = entrada
+                            mov.detalle_entrada = detalle
+                            mov.save(update_fields=['entrada', 'detalle_entrada'])
+
+                    messages.success(request, f"Factura registrada: {entrada.numero_entrada} con {detalle_formset.total_form_count()} producto(s).")
+                    return redirect('inventario:productos')
+            except Exception as e:
+                messages.error(request, f'Error al registrar la factura: {str(e)}')
+        else:
+            messages.error(request, 'Corrige los errores en el formulario.')
+    else:
+        entrada_form = EntradaStockForm(initial={'tipo': 'COMPRA', 'fecha_compra': date.today()})
+        detalle_formset = DetalleEntradaFormSet(prefix='detalles')
+
+    context = {
+        'entrada_form': entrada_form,
+        'detalle_formset': detalle_formset,
+        'areas': Area.objects.filter(activo=True),
+        'proveedores': Proveedor.objects.filter(activo=True),
+        'productos': Producto.objects.filter(activo=True),
+    }
+    return render(request, 'inventario/ingresar_factura.html', context)
+
+
+@login_required
+def proveedores_sugeridos(request):
+    """Devuelve proveedores sugeridos para un producto (+/- área) según historial."""
+    producto_id = request.GET.get('producto_id')
+    area_id = request.GET.get('area_id')
+    if not producto_id:
+        return JsonResponse({'success': False, 'error': 'producto_id requerido'}, status=400)
+
+    detalles = DetalleEntradaStock.objects.filter(producto_id=producto_id).select_related('entrada__proveedor')
+    if area_id:
+        detalles = detalles.filter(area_destino_id=area_id)
+
+    # Contar ocurrencias por proveedor
+    from collections import Counter
+    conteo = Counter()
+    ultimo_por_prov = {}
+    for d in detalles:
+        prov = d.entrada.proveedor
+        if prov:
+            conteo[prov.id] += 1
+            # Guardar última fecha/precio
+            if (prov.id not in ultimo_por_prov) or (d.entrada.fecha_compra and d.entrada.fecha_compra > ultimo_por_prov[prov.id]['fecha']):
+                ultimo_por_prov[prov.id] = {
+                    'fecha': d.entrada.fecha_compra,
+                    'precio': d.precio_unitario
+                }
+
+    sugeridos = []
+    for prov_id, count in conteo.most_common(5):
+        try:
+            prov = Proveedor.objects.get(id=prov_id)
+            info = ultimo_por_prov.get(prov_id, {})
+            sugeridos.append({
+                'id': prov.id,
+                'nombre': prov.nombre,
+                'veces': count,
+                'ultima_fecha': info.get('fecha').isoformat() if info.get('fecha') else None,
+                'ultimo_precio': str(info.get('precio')) if info.get('precio') is not None else None
+            })
+        except Proveedor.DoesNotExist:
+            continue
+
+    return JsonResponse({'success': True, 'sugeridos': sugeridos})
+
+
+@login_required
+def trazabilidad(request):
+    """Reporte simple de trazabilidad por producto (timeline de movimientos)."""
+    producto_id = request.GET.get('producto')
+    movimientos = []
+    producto_sel = None
+    if producto_id:
+        producto_sel = get_object_or_404(Producto, id=producto_id)
+        movimientos = Movimiento.objects.select_related('area_origen','area_destino','usuario','entrada','detalle_entrada').filter(
+            producto=producto_sel
+        ).order_by('-fecha')[:200]
+
+    return render(request, 'inventario/trazabilidad.html', {
+        'productos': Producto.objects.filter(activo=True).order_by('nombre'),
+        'producto_sel': producto_sel,
+        'movimientos': movimientos,
+    })
 
 
 @login_required
@@ -530,14 +697,15 @@ def entrada_stock(request):
         observaciones = request.POST.get('observaciones', '')
         comprobante = request.FILES.get('comprobante')
         
-        if not all([producto_id, numero_entrada, fecha_compra, area_destino_id, cantidad]):
+        # Identificación opcional: no exigimos numero_entrada
+        if not all([producto_id, fecha_compra, area_destino_id, cantidad]):
             messages.error(request, 'Por favor completa todos los campos obligatorios.')
         else:
             try:
                 with transaction.atomic():
                     # Crear la entrada
                     entrada = EntradaStock.objects.create(
-                        numero_entrada=numero_entrada,
+                        numero_entrada=numero_entrada or '',
                         fecha_compra=fecha_compra,
                         proveedor_id=proveedor_id if proveedor_id else None,
                         total_compra=Decimal(total_compra) if total_compra else None,
@@ -571,12 +739,14 @@ def entrada_stock(request):
                         stock.cantidad += cantidad_decimal
                         stock.save()
                     
-                    # Crear movimiento
+                    # Crear movimiento (entrada por compra)
                     Movimiento.objects.create(
                         producto=producto,
-                        area=area,
+                        area_destino=area,
                         tipo='ENTRADA',
+                        motivo='COMPRA',
                         cantidad=cantidad_decimal,
+                        precio_unitario=precio_decimal,
                         usuario=request.user,
                         observaciones=f'Entrada: {entrada.numero_entrada}'
                     )
@@ -612,3 +782,245 @@ def entrada_stock(request):
         'proximo_numero_entrada': proximo_numero,
     }
     return render(request, 'inventario/entrada_stock.html', context)
+
+
+@login_required
+def entrada_stock_simple(request):
+    """Vista simplificada para entrada de stock con interfaz de cards"""
+    from datetime import date
+    
+    # Generar próximo número de entrada automáticamente
+    ultima_entrada_num = EntradaStock.objects.all().order_by('-id').first()
+    if ultima_entrada_num:
+        try:
+            ultimo_num = int(ultima_entrada_num.numero_entrada.split('-')[-1])
+            proximo_numero = f"REC-{ultimo_num + 1:04d}"
+        except:
+            from datetime import datetime
+            proximo_numero = f"REC-{datetime.now().strftime('%m%d%H%M')}"
+    else:
+        proximo_numero = "REC-0001"
+    
+    # Manejo del POST: crear entrada de stock simple
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                producto_id = request.POST.get('producto_id') or request.POST.get('producto') or request.POST.get('idProducto')
+                cantidad = request.POST.get('cantidad')
+                area_id = request.POST.get('area') or request.POST.get('area_destino')
+                proveedor_id = request.POST.get('proveedor')
+                precio = request.POST.get('precio') or request.POST.get('precio_unitario')
+                fecha_compra = request.POST.get('fecha_compra') or date.today().isoformat()
+
+                if not producto_id or not cantidad or not area_id:
+                    messages.error(request, 'Faltan datos obligatorios: producto, cantidad y área.')
+                    return redirect('inventario:entrada_stock')
+
+                # Generar número de recibo/entrada
+                ultima_entrada_num = EntradaStock.objects.all().order_by('-id').first()
+                if ultima_entrada_num:
+                    try:
+                        ultimo_num = int(ultima_entrada_num.numero_entrada.split('-')[-1])
+                        numero_generado = f"REC-{ultimo_num + 1:04d}"
+                    except Exception:
+                        from datetime import datetime
+                        numero_generado = f"REC-{datetime.now().strftime('%m%d%H%M%S')}"
+                else:
+                    numero_generado = "REC-0001"
+
+                # Objetos base
+                producto = Producto.objects.get(id=producto_id)
+                area = Area.objects.get(id=area_id)
+                cantidad_dec = Decimal(str(cantidad))
+                if cantidad_dec <= 0:
+                    messages.error(request, 'La cantidad debe ser mayor a 0.')
+                    return redirect('inventario:entrada_stock')
+                precio_dec = Decimal(str(precio)) if precio else None
+
+                # Crear entrada y detalle
+                entrada = EntradaStock.objects.create(
+                    numero_entrada=numero_generado,
+                    tipo='COMPRA',
+                    proveedor_id=proveedor_id if proveedor_id else None,
+                    fecha_compra=fecha_compra,
+                    total_compra=(cantidad_dec * precio_dec) if precio_dec else None,
+                    observaciones=f'Entrada rápida - {producto.nombre}',
+                    registrado_por=request.user
+                )
+
+                DetalleEntradaStock.objects.create(
+                    entrada=entrada,
+                    producto=producto,
+                    cantidad=cantidad_dec,
+                    precio_unitario=precio_dec,
+                    area_destino=area
+                )
+
+                # Actualizar/crear stock
+                stock, created = Stock.objects.get_or_create(
+                    producto=producto,
+                    area=area,
+                    defaults={'cantidad': cantidad_dec}
+                )
+                if not created:
+                    stock.cantidad += cantidad_dec
+                    stock.save()
+
+                # Registrar movimiento
+                Movimiento.objects.create(
+                    producto=producto,
+                    area_destino=area,
+                    tipo='ENTRADA',
+                    motivo='COMPRA',
+                    cantidad=cantidad_dec,
+                    precio_unitario=precio_dec,
+                    usuario=request.user,
+                    observaciones=f'Entrada: {entrada.numero_entrada}'
+                )
+
+                messages.success(request, f'Stock agregado: +{cantidad_dec} {producto.unidad_medida} a {producto.nombre}.')
+                return redirect('inventario:detalle_producto', producto_id=producto.id)
+        except Exception as e:
+            messages.error(request, f'Error al registrar la entrada: {str(e)}')
+            return redirect('inventario:entrada_stock')
+
+    # Obtener productos con stock actual
+    productos = Producto.objects.filter(activo=True).select_related('categoria').annotate(
+        stock_total=Sum('stocks__cantidad')
+    ).order_by('categoria__nombre', 'nombre')
+    
+    # Agregar información de última entrada para auto-completar
+    productos_con_info = []
+    for producto in productos:
+        ultima_entrada = DetalleEntradaStock.objects.filter(
+            producto=producto
+        ).select_related('entrada', 'entrada__proveedor', 'area_destino').order_by('-entrada__fecha_compra').first()
+        
+        if ultima_entrada:
+            producto.ultimo_proveedor = ultima_entrada.entrada.proveedor
+            producto.ultima_area = ultima_entrada.area_destino
+            producto.ultimo_precio = ultima_entrada.precio_unitario
+        else:
+            producto.ultimo_proveedor = None
+            producto.ultima_area = None
+            producto.ultimo_precio = producto.precio_unitario or 0
+            
+        productos_con_info.append(producto)
+    
+    context = {
+        'productos': productos_con_info,
+        'areas': Area.objects.filter(activo=True),
+        'proveedores': Proveedor.objects.filter(activo=True),
+        'categorias': Categoria.objects.filter(activo=True),
+        'fecha_hoy': date.today().isoformat(),
+        'proximo_numero': proximo_numero,
+    }
+    return render(request, 'inventario/entrada_stock_simple.html', context)
+
+
+@login_required
+def agregar_stock_ajax(request):
+    """Vista AJAX para agregar stock de forma rápida"""
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            
+            producto_id = data.get('producto_id')
+            cantidad = Decimal(str(data.get('cantidad', 0)))
+            area_id = data.get('area_id')
+            proveedor_id = data.get('proveedor_id')
+            precio_unitario = data.get('precio_unitario')
+            numero_recibo = data.get('numero_recibo')
+            
+            if not all([producto_id, cantidad, area_id]):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Faltan datos obligatorios'
+                })
+            
+            if cantidad <= 0:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'La cantidad debe ser mayor a 0'
+                })
+            
+            with transaction.atomic():
+                # Obtener objetos
+                producto = Producto.objects.get(id=producto_id)
+                area = Area.objects.get(id=area_id)
+                proveedor = Proveedor.objects.get(id=proveedor_id) if proveedor_id else None
+                
+                # Crear entrada de stock
+                entrada = EntradaStock.objects.create(
+                    numero_entrada=numero_recibo,
+                    fecha_compra=date.today(),
+                    proveedor=proveedor,
+                    total_compra=cantidad * (Decimal(str(precio_unitario)) if precio_unitario else 0),
+                    observaciones=f'Entrada rápida - {producto.nombre}',
+                    registrado_por=request.user
+                )
+                
+                # Crear detalle
+                DetalleEntradaStock.objects.create(
+                    entrada=entrada,
+                    producto=producto,
+                    cantidad=cantidad,
+                    precio_unitario=Decimal(str(precio_unitario)) if precio_unitario else None,
+                    area_destino=area
+                )
+                
+                # Actualizar stock
+                stock, created = Stock.objects.get_or_create(
+                    producto=producto,
+                    area=area,
+                    defaults={'cantidad': cantidad}
+                )
+                if not created:
+                    stock.cantidad += cantidad
+                    stock.save()
+                
+                # Crear movimiento
+                Movimiento.objects.create(
+                    producto=producto,
+                    area_destino=area,
+                    tipo='ENTRADA',
+                    motivo='COMPRA',
+                    cantidad=cantidad,
+                    precio_unitario=Decimal(str(precio_unitario)) if precio_unitario else None,
+                    usuario=request.user,
+                    observaciones=f'Entrada: {entrada.numero_entrada}'
+                )
+                
+                # Calcular nuevo stock total
+                nuevo_stock_total = Stock.objects.filter(producto=producto).aggregate(
+                    total=Sum('cantidad')
+                )['total'] or 0
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Stock agregado exitosamente',
+                    'nuevo_stock': str(nuevo_stock_total),
+                    'recibo': entrada.numero_entrada
+                })
+                
+        except Producto.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Producto no encontrado'
+            })
+        except Area.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Área no encontrada'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error interno: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Método no permitido'
+    })

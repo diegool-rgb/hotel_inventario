@@ -34,10 +34,7 @@ urlpatterns = [
     # Aplicaciones principales
     path('', include('inventario.urls')),  # Home y dashboard
     # path('pedidos/', include('pedidos.urls')),
-    # path('reportes/', include('reportes.urls')),
-    
-    # Sistema de autenticación de Django (como respaldo)
-    path('accounts/', include('django.contrib.auth.urls')),
+    path('reportes/', include('reportes.urls')),
 ]
 
 # Servir archivos estáticos en desarrollo

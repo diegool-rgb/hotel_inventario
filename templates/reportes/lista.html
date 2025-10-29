@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Reportes - Sistema de Inventario{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <i class="bi bi-file-earmark-text me-2"></i>
+    Reportes Generados
+  </h1>
+  <p class="page-subtitle">Listado de los últimos reportes disponibles</p>
+</div>
+
+<div class="card card-professional">
+  <div class="card-header card-header-professional d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">
+      <i class="bi bi-list-ul me-2"></i>
+      Últimos reportes
+    </h5>
+  </div>
+  <div class="card-body p-0">
+    {% if reportes %}
+    <div class="table-responsive">
+      <table class="table table-professional table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Tipo</th>
+            <th>Formato</th>
+            <th>Generado</th>
+            <th>Por</th>
+            <th class="text-end">Tamaño</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in reportes %}
+          {% with r=item.obj %}
+          <tr>
+            <td><strong>{{ r.nombre }}</strong></td>
+            <td>{{ r.tipo_reporte.nombre }}</td>
+            <td>
+              <span class="badge badge-professional">
+                {{ r.formato }}
+              </span>
+            </td>
+            <td><small class="text-muted-professional">{{ r.fecha_generacion|date:"d/m/Y H:i" }}</small></td>
+            <td><small class="text-muted-professional">{{ r.generado_por.get_full_name|default:r.generado_por.username }}</small></td>
+            <td class="text-end">
+              {% if item.tamano_kb %}
+                <small class="text-muted-professional">{{ item.tamano_kb|floatformat:1 }} KB</small>
+              {% else %}
+                <small class="text-muted-professional">—</small>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if item.archivo_url %}
+                <a href="{{ item.archivo_url }}" class="btn btn-professional-secondary btn-sm" target="_blank">
+                  <i class="bi bi-box-arrow-up-right"></i> Abrir
+                </a>
+              {% else %}
+                <span class="text-muted-professional">Sin archivo</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <i class="bi bi-file-earmark text-muted-professional" style="font-size: 3rem;"></i>
+      <p class="text-muted-professional mt-3 mb-0">No hay reportes generados todavía.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

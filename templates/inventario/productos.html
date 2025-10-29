@@ -3,381 +3,296 @@
 {% block title %}Productos - Sistema de Inventario{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center fade-in-up">
-                <div>
-                    <h1 class="display-6 fw-bold mb-2">
-                        <i class="bi bi-box-seam me-3 text-primary"></i>
-                        Productos
-                    </h1>
-                    <p class="text-muted mb-0">Gestiona el inventario de productos del hotel</p>
+<!-- Page Header -->
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-start">
+        <div>
+            <h1 class="page-title">
+                <i class="bi bi-box-seam me-2"></i>
+                Gestión de Productos
+            </h1>
+            <p class="page-subtitle">
+                Total: {{ productos|length }} productos registrados
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'inventario:agregar_producto' %}" class="btn btn-professional-primary me-2">
+                <i class="bi bi-plus-circle me-2"></i>
+                Nuevo Producto
+            </a>
+            <a href="{% url 'inventario:entrada_stock' %}" class="btn btn-professional-secondary">
+                <i class="bi bi-arrow-down-circle me-2"></i>
+                Entrada Stock
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros y Búsqueda -->
+<div class="card card-professional mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label form-label-professional">Buscar producto:</label>
+                <input type="text" name="q" class="form-control form-control-professional" 
+                       value="{{ request.GET.q }}" placeholder="Nombre del producto...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label form-label-professional">Categoría:</label>
+                <select name="categoria" class="form-select form-control-professional">
+                    <option value="">Todas las categorías</option>
+                    <option value="AMENITIES" {% if request.GET.categoria == 'AMENITIES' %}selected{% endif %}>Amenities</option>
+                    <option value="BEBIDAS" {% if request.GET.categoria == 'BEBIDAS' %}selected{% endif %}>Bebidas</option>
+                    <option value="ALIMENTOS" {% if request.GET.categoria == 'ALIMENTOS' %}selected{% endif %}>Alimentos</option>
+                    <option value="LIMPIEZA" {% if request.GET.categoria == 'LIMPIEZA' %}selected{% endif %}>Limpieza</option>
+                    <option value="MANTENIMIENTO" {% if request.GET.categoria == 'MANTENIMIENTO' %}selected{% endif %}>Mantenimiento</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label form-label-professional">Estado:</label>
+                <select name="estado" class="form-select form-control-professional">
+                    <option value="">Todos</option>
+                    <option value="stock_ok" {% if request.GET.estado == 'stock_ok' %}selected{% endif %}>Stock Normal</option>
+                    <option value="stock_bajo" {% if request.GET.estado == 'stock_bajo' %}selected{% endif %}>Stock Bajo</option>
+                    <option value="sin_stock" {% if request.GET.estado == 'sin_stock' %}selected{% endif %}>Sin Stock</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label form-label-professional">&nbsp;</label>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-professional-primary">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
                 </div>
-                <div>
-                    <a href="{% url 'inventario:agregar_producto' %}" class="btn btn-success btn-modern">
-                        <i class="bi bi-plus-lg me-2"></i>
-                        Nuevo Producto
-                    </a>
-                    <a href="{% url 'inventario:entrada_stock' %}" class="btn btn-primary btn-modern ms-2">
-                        <i class="bi bi-box-arrow-in-down me-2"></i>
-                        Entrada de Stock
-                    </a>
-                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Estadísticas Rápidas -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card card-professional text-center">
+            <div class="card-body py-3">
+                <h4 class="text-primary-professional mb-1">{{ stats.total_productos }}</h4>
+                <small class="text-muted-professional">Total Productos</small>
             </div>
         </div>
     </div>
+    <div class="col-md-3 mb-3">
+        <div class="card card-professional text-center">
+            <div class="card-body py-3">
+                <h4 class="mb-1" style="color: var(--success-color);">{{ stats.productos_stock_ok }}</h4>
+                <small class="text-muted-professional">Stock Normal</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card card-professional text-center">
+            <div class="card-body py-3">
+                <h4 class="mb-1" style="color: var(--warning-color);">{{ stats.productos_stock_bajo }}</h4>
+                <small class="text-muted-professional">Stock Bajo</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card card-professional text-center">
+            <div class="card-body py-3">
+                <h4 class="mb-1" style="color: var(--danger-color);">{{ stats.productos_sin_stock }}</h4>
+                <small class="text-muted-professional">Sin Stock</small>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <!-- Filtros -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card card-modern fade-in-up">
-                <div class="card-body">
-                    <form method="get" class="row g-3 align-items-end">
-                        <div class="col-md-4">
-                            <label for="q" class="form-label">Buscar Producto</label>
-                            <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="bi bi-search"></i>
+<!-- Lista de Productos -->
+<div class="card card-professional">
+    <div class="card-header card-header-professional">
+        <h5 class="mb-0">
+            <i class="bi bi-list-ul me-2"></i>
+            Lista de Productos
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        {% if productos %}
+        <div class="table-responsive">
+            <table class="table table-professional table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Categoría</th>
+                        <th class="text-center">Stock Actual</th>
+                        <th class="text-center">Stock Mínimo</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Precio Unitario</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for producto in productos %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    {% if producto.categoria == 'AMENITIES' %}
+                                        <i class="bi bi-gift text-primary-professional" style="font-size: 1.2rem;"></i>
+                                    {% elif producto.categoria == 'BEBIDAS' %}
+                                        <i class="bi bi-cup-straw" style="font-size: 1.2rem; color: var(--accent-color);"></i>
+                                    {% elif producto.categoria == 'ALIMENTOS' %}
+                                        <i class="bi bi-basket3" style="font-size: 1.2rem; color: var(--success-color);"></i>
+                                    {% elif producto.categoria == 'LIMPIEZA' %}
+                                        <i class="bi bi-droplet" style="font-size: 1.2rem; color: var(--warning-color);"></i>
+                                    {% else %}
+                                        <i class="bi bi-tools" style="font-size: 1.2rem; color: var(--secondary-color);"></i>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <strong>{{ producto.nombre }}</strong>
+                                    <br>
+                                    <small class="text-muted-professional">Unidad: {{ producto.unidad }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge badge-professional" 
+                                  style="background-color: 
+                                  {% if producto.categoria == 'AMENITIES' %}var(--primary-color)
+                                  {% elif producto.categoria == 'BEBIDAS' %}var(--accent-color)
+                                  {% elif producto.categoria == 'ALIMENTOS' %}var(--success-color)
+                                  {% elif producto.categoria == 'LIMPIEZA' %}var(--warning-color)
+                                  {% else %}var(--secondary-color){% endif %};">
+                                {{ producto.get_categoria_display }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <strong>{{ producto.stock_actual }}</strong> {{ producto.unidad }}
+                        </td>
+                        <td class="text-center">
+                            <small class="text-muted-professional">{{ producto.stock_min }} {{ producto.unidad }}</small>
+                        </td>
+                        <td class="text-center">
+                            {% if producto.stock_actual == 0 %}
+                                <span class="badge badge-professional danger">
+                                    <i class="bi bi-x-circle"></i> Sin Stock
                                 </span>
-                                <input type="text" class="form-control" id="q" name="q" 
-                                       value="{{ busqueda|default:'' }}" 
-                                       placeholder="Código o nombre del producto...">
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-3">
-                            <label for="area" class="form-label">Área</label>
-                            <select class="form-select" id="area" name="area">
-                                <option value="">Todas las áreas</option>
-                                {% for area in areas %}
-                                <option value="{{ area.id }}"
-                                        {% if area.id|stringformat:"s" == area_seleccionada %}selected{% endif %}>
-                                    {{ area.nombre }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-3">
-                            <button type="submit" class="btn btn-primary btn-modern me-2">
-                                <i class="bi bi-funnel me-2"></i>
-                                Filtrar
-                            </button>
-                            <a href="{% url 'inventario:productos' %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-lg"></i>
-                            </a>
-                        </div>
-                        
-                        <div class="col-md-2 text-end">
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-outline-primary active" id="view-grid">
-                                    <i class="bi bi-grid-3x3-gap"></i>
-                                </button>
-                                <button type="button" class="btn btn-outline-primary" id="view-list">
-                                    <i class="bi bi-list-ul"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Vista de Tarjetas (Grid) -->
-    <div id="grid-view" class="row g-4">
-        {% for producto in productos %}
-        <div class="col-xl-3 col-lg-4 col-md-6 fade-in-up">
-            <div class="card card-modern h-100 product-card" data-product-id="{{ producto.id }}">
-                <div class="card-body">
-                    <!-- Header del producto -->
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div class="flex-grow-1">
-                            <h6 class="card-title mb-1">{{ producto.nombre }}</h6>
-                            <small class="text-muted">{{ producto.codigo }}</small>
-                        </div>
-                        <div class="text-end">
-                            {% if producto.tiene_stock_bajo %}
-                                <span class="badge bg-warning pulse">
-                                    <i class="bi bi-exclamation-triangle"></i>
+                            {% elif producto.stock_actual <= producto.stock_min %}
+                                <span class="badge badge-professional warning">
+                                    <i class="bi bi-exclamation-triangle"></i> Stock Bajo
                                 </span>
                             {% else %}
-                                <span class="badge bg-success">
-                                    <i class="bi bi-check-circle"></i>
+                                <span class="badge badge-professional success">
+                                    <i class="bi bi-check-circle"></i> Normal
                                 </span>
                             {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Categoría -->
-                    <div class="mb-3">
-                        <span class="badge bg-light text-dark">
-                            <i class="bi bi-tag me-1"></i>
-                            {{ producto.categoria.nombre }}
-                        </span>
-                    </div>
-
-                    <!-- Stock Info -->
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <small class="text-muted">Stock Total</small>
-                            <strong class="text-primary">{{ producto.stock_total }} {{ producto.get_unidad_medida_display }}</strong>
-                        </div>
-                        <div class="progress" style="height: 8px;">
-                            {% with stock_percentage=producto.stock_total|floatformat:0 min_stock=producto.stock_minimo|floatformat:0 %}
-                                {% widthratio stock_percentage min_stock 100 as percentage %}
-                                <div class="progress-bar 
-                                    {% if percentage <= 50 %}bg-danger
-                                    {% elif percentage <= 100 %}bg-warning
-                                    {% else %}bg-success{% endif %}" 
-                                     role="progressbar" style="width: {{ percentage|default:0 }}%">
-                                </div>
-                            {% endwith %}
-                        </div>
-                        <small class="text-muted">Mínimo: {{ producto.stock_minimo }} {{ producto.get_unidad_medida_display }}</small>
-                    </div>
-
-                    <!-- Precio -->
-                    {% if producto.precio_unitario %}
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between">
-                            <small class="text-muted">Precio Unitario</small>
-                            <strong class="text-success">${{ producto.precio_unitario|floatformat:0 }}</strong>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Actions -->
-                    <div class="d-flex gap-2">
-                        <a href="{% url 'inventario:detalle_producto' producto.id %}" 
-                           class="btn btn-outline-primary btn-sm flex-grow-1">
-                            <i class="bi bi-eye me-1"></i>
-                            Ver Detalle
-                        </a>
-                        <a href="/admin/inventario/producto/{{ producto.id }}/change/" 
-                           class="btn btn-outline-secondary btn-sm">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
+                        </td>
+                        <td class="text-end">
+                            {% if producto.precio_unitario %}
+                                <strong>${{ producto.precio_unitario|floatformat:2 }}</strong>
+                            {% else %}
+                                <small class="text-muted-professional">No definido</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'inventario:detalle_producto' producto.id %}" 
+                                   class="btn btn-professional-secondary btn-sm" 
+                                   data-bs-toggle="tooltip" title="Ver detalles">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'inventario:agregar_stock' producto.id %}" 
+                                   class="btn btn-professional-primary btn-sm" 
+                                   data-bs-toggle="tooltip" title="Añadir stock">
+                                    <i class="bi bi-plus"></i>
+                                </a>
+                                <button class="btn btn-professional-secondary btn-sm" 
+                                        data-bs-toggle="tooltip" title="Más opciones">
+                                    <i class="bi bi-three-dots"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-        {% empty %}
-        <div class="col-12">
-            <div class="card card-modern">
-                <div class="card-body text-center py-5">
-                    <i class="bi bi-search text-muted" style="font-size: 4rem;"></i>
-                    <h4 class="mt-3">No se encontraron productos</h4>
-                    <p class="text-muted">Intenta ajustar los filtros de búsqueda o crea un nuevo producto.</p>
-                    <a href="/admin/inventario/producto/add/" class="btn btn-primary btn-modern">
-                        <i class="bi bi-plus-lg me-2"></i>
-                        Crear Primer Producto
-                    </a>
-                </div>
-            </div>
+        {% else %}
+        <!-- Estado vacío -->
+        <div class="text-center py-5">
+            <i class="bi bi-inbox text-muted-professional" style="font-size: 4rem;"></i>
+            <h4 class="mt-3 text-muted-professional">No se encontraron productos</h4>
+            <p class="text-muted-professional">
+                {% if request.GET.q or request.GET.categoria or request.GET.estado %}
+                    No hay productos que coincidan con los filtros seleccionados.
+                {% else %}
+                    Comienza agregando tu primer producto al inventario.
+                {% endif %}
+            </p>
+            {% if not request.GET.q and not request.GET.categoria and not request.GET.estado %}
+            <a href="{% url 'inventario:agregar_producto' %}" class="btn btn-professional-primary mt-3">
+                <i class="bi bi-plus-circle me-2"></i>
+                Agregar Primer Producto
+            </a>
+            {% else %}
+            <a href="{% url 'inventario:productos' %}" class="btn btn-professional-secondary mt-3">
+                <i class="bi bi-arrow-left me-2"></i>
+                Ver Todos los Productos
+            </a>
+            {% endif %}
         </div>
-        {% endfor %}
+        {% endif %}
     </div>
-
-    <!-- Vista de Lista -->
-    <div id="list-view" class="d-none">
-        <div class="card card-modern fade-in-up">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="border-0">Producto</th>
-                                <th class="border-0">Categoría</th>
-                                <th class="border-0">Stock Actual</th>
-                                <th class="border-0">Stock Mínimo</th>
-                                <th class="border-0">Estado</th>
-                                <th class="border-0">Precio</th>
-                                <th class="border-0 text-center">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for producto in productos %}
-                            <tr class="product-row" data-product-id="{{ producto.id }}">
-                                <td>
-                                    <div>
-                                        <strong>{{ producto.nombre }}</strong>
-                                        <br>
-                                        <small class="text-muted">{{ producto.codigo }}</small>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-light text-dark">
-                                        {{ producto.categoria.nombre }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <strong class="text-primary">{{ producto.stock_total }}</strong>
-                                    <small class="text-muted">{{ producto.get_unidad_medida_display }}</small>
-                                </td>
-                                <td>
-                                    <span class="text-muted">{{ producto.stock_minimo }} {{ producto.get_unidad_medida_display }}</span>
-                                </td>
-                                <td>
-                                    {% if producto.tiene_stock_bajo %}
-                                        <span class="badge bg-warning">
-                                            <i class="bi bi-exclamation-triangle me-1"></i>
-                                            Stock Bajo
-                                        </span>
-                                    {% else %}
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle me-1"></i>
-                                            OK
-                                        </span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if producto.precio_unitario %}
-                                        <strong class="text-success">${{ producto.precio_unitario|floatformat:0 }}</strong>
-                                    {% else %}
-                                        <span class="text-muted">N/A</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-center">
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{% url 'inventario:detalle_producto' producto.id %}" 
-                                           class="btn btn-outline-primary" title="Ver Detalle">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        <a href="/admin/inventario/producto/{{ producto.id }}/change/" 
-                                           class="btn btn-outline-secondary" title="Editar">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="7" class="text-center py-5">
-                                    <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
-                                    <h5 class="mt-3">No hay productos</h5>
-                                    <p class="text-muted">Comienza agregando tu primer producto.</p>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Resumen de resultados -->
-    {% if productos %}
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card card-modern fade-in-up">
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-md-3">
-                            <div class="stat-card">
-                                <div class="stat-number text-primary">{{ productos|length }}</div>
-                                <small class="text-muted">Productos Mostrados</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="stat-card">
-                                <div class="stat-number text-warning">
-                                    {% for producto in productos %}
-                                        {% if producto.tiene_stock_bajo %}1{% endif %}
-                                    {% empty %}0{% endfor %}
-                                </div>
-                                <small class="text-muted">Con Stock Bajo</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="stat-card">
-                                <div class="stat-number text-success">{{ areas|length }}</div>
-                                <small class="text-muted">Áreas</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="stat-card">
-                                <div class="stat-number text-info">
-                                    {% for producto in productos %}
-                                        {% if not producto.tiene_stock_bajo %}1{% endif %}
-                                    {% empty %}0{% endfor %}
-                                </div>
-                                <small class="text-muted">Stock OK</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 </div>
+
+<!-- Paginación (si aplica) -->
+{% if is_paginated %}
+<div class="d-flex justify-content-center mt-4">
+    <nav>
+        <ul class="pagination pagination-sm">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}">Primera</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}">Anterior</a>
+                </li>
+            {% endif %}
+            
+            <li class="page-item active">
+                <span class="page-link">{{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}">Siguiente</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}">Última</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Toggle entre vista de grid y lista
-    const viewGrid = document.getElementById('view-grid');
-    const viewList = document.getElementById('view-list');
-    const gridView = document.getElementById('grid-view');
-    const listView = document.getElementById('list-view');
-
-    viewGrid.addEventListener('click', function() {
-        viewGrid.classList.add('active');
-        viewList.classList.remove('active');
-        gridView.classList.remove('d-none');
-        listView.classList.add('d-none');
-        localStorage.setItem('product-view', 'grid');
-    });
-
-    viewList.addEventListener('click', function() {
-        viewList.classList.add('active');
-        viewGrid.classList.remove('active');
-        listView.classList.remove('d-none');
-        gridView.classList.add('d-none');
-        localStorage.setItem('product-view', 'list');
-    });
-
-    // Restaurar vista guardada
-    const savedView = localStorage.getItem('product-view');
-    if (savedView === 'list') {
-        viewList.click();
-    }
-
-    // Hover effects para las tarjetas
-    const productCards = document.querySelectorAll('.product-card');
-    productCards.forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-5px)';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-        });
-    });
-
-    // Filtros en tiempo real
-    const searchInput = document.getElementById('q');
-    if (searchInput) {
-        let searchTimeout;
-        searchInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                // Aquí podrías implementar búsqueda AJAX en tiempo real
-                console.log('Searching for:', this.value);
+    // Auto-envío del formulario de filtros con delay
+    const filterInputs = document.querySelectorAll('input[name="q"], select[name="categoria"], select[name="estado"]');
+    let timeout;
+    
+    filterInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                if (input.name === 'q' && input.value.length > 0 && input.value.length < 3) {
+                    return; // No buscar hasta tener 3 caracteres
+                }
+                // this.form.submit(); // Descomenta para filtrado automático
             }, 500);
         });
-    }
+    });
 });
-
-// Función para exportar productos
-function exportProducts(format) {
-    showNotification(`Exportando productos en formato ${format.toUpperCase()}...`, 'info');
-    // Implementar exportación
-}
 </script>
 {% endblock %}

@@ -20,10 +20,17 @@ urlpatterns = [
     path('proveedores/nuevo/', views.agregar_proveedor, name='agregar_proveedor'),
     
     # Entradas de stock
-    path('entrada-stock/', views.entrada_stock, name='entrada_stock'),
+    path('ingresar-factura/', views.ingresar_factura, name='ingresar_factura'),
+    path('entrada-stock-completa/', views.entrada_stock, name='entrada_stock_completa'),
+    path('entrada-stock/', views.entrada_stock_simple, name='entrada_stock'),
+    path('ajax/agregar-stock/', views.agregar_stock_ajax, name='agregar_stock_ajax'),
+    path('api/proveedores-sugeridos/', views.proveedores_sugeridos, name='proveedores_sugeridos'),
     
     # Alertas de stock
     path('alertas/', views.alertas_stock, name='alertas'),
+
+    # Trazabilidad
+    path('trazabilidad/', views.trazabilidad, name='trazabilidad'),
     
     # Ayuda
     path('ayuda/', views.ayuda, name='ayuda'),

@@ -4,617 +4,223 @@
 {% block title %}Productos - Sistema de Inventario{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="display-6 fw-bold mb-2">
-                        <i class="bi bi-boxes me-3 text-primary"></i>
-                        Mis Productos
-                    </h1>
-                    <p class="text-muted mb-0">Gestiona el inventario de tu hotel</p>
-                </div>
-                <div class="d-flex gap-2">
-                    <!-- Ayuda rápida -->
-                    <a href="{% url 'inventario:ayuda' %}" class="btn btn-info me-2">
-                        <i class="bi bi-question-circle me-2"></i>
-                        Ayuda
-                    </a>
-                    
-                    <!-- Guía simple de qué botón usar -->
-                    <div class="dropdown">
-                        <button class="btn btn-outline-info dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-lightbulb me-2"></i>
-                            ¿Qué botón usar?
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end" style="min-width: 350px;">
-                            <li class="dropdown-header">
-                                <strong>🤔 ¿No sabes qué botón usar?</strong>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li class="px-3 py-2">
-                                <div class="d-flex align-items-start">
-                                    <div class="badge bg-success me-3 mt-1">NUEVO</div>
-                                    <div>
-                                        <strong>🆕 Nuevo Producto</strong><br>
-                                        <small class="text-muted">
-                                            • Es la primera vez que compras este producto<br>
-                                            • No existe en tu inventario<br>
-                                            • Ejemplo: Compraste shampoo por primera vez
-                                        </small>
-                                    </div>
-                                </div>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li class="px-3 py-2">
-                                <div class="d-flex align-items-start">
-                                    <div class="badge bg-warning me-3 mt-1">MÁS</div>
-                                    <div>
-                                        <strong>📥 Entrada de Stock</strong><br>
-                                        <small class="text-muted">
-                                            • Ya tienes este producto<br>
-                                            • Compraste más cantidad<br>
-                                            • Ejemplo: Compraste más shampoo para reabastecer
-                                        </small>
-                                    </div>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-                    
-                    <a href="{% url 'inventario:agregar_producto' %}" class="btn btn-success">
-                        <i class="bi bi-plus-circle me-2"></i>
-                        🆕 Nuevo Producto
-                    </a>
-                    
-                    <a href="{% url 'inventario:entrada_stock' %}" class="btn btn-warning">
-                        <i class="bi bi-box-arrow-in-down me-2"></i>
-                        📥 Entrada de Stock
-                    </a>
-                </div>
-            </div>
+<div class="container-fluid px-4 productos-page">
+    <div class="d-flex flex-wrap justify-content-between align-items-start mb-4">
+        <div>
+            <h1 class="display-6 fw-bold mb-2">
+                <i class="bi bi-boxes me-3 text-primary"></i>
+                Mis Productos
+            </h1>
+            <p class="text-muted mb-0">{{ total_productos }} productos activos en el inventario</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'inventario:agregar_producto' %}" class="btn btn-success">
+                <i class="bi bi-plus-circle me-2"></i>
+                Nuevo producto
+            </a>
+            <a href="{% url 'inventario:ingresar_factura' %}" class="btn btn-outline-warning">
+                <i class="bi bi-receipt me-2"></i>
+                Ingresar factura
+            </a>
+            <a href="{% url 'inventario:ayuda' %}" class="btn btn-outline-info">
+                <i class="bi bi-question-circle me-2"></i>
+                Guía de uso
+            </a>
         </div>
     </div>
 
-    <!-- Filtros y Buscador -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="bi bi-funnel me-2"></i>
-                        Filtros y Búsqueda
-                    </h6>
-                </div>
+    <div class="row g-4">
+        <div class="col-12 col-lg-9">
+            <div class="card mb-4">
                 <div class="card-body">
-                    <form method="get" id="filtroForm">
-                        <div class="row g-3">
-                            <!-- Buscador -->
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">
-                                    <i class="bi bi-search me-1"></i>Buscar producto
-                                </label>
-                                <input type="text" name="q" class="form-control" 
-                                       placeholder="Nombre o código del producto..." 
-                                       value="{{ busqueda|default:'' }}">
-                            </div>
-                            
-                            <!-- Filtro por categoría -->
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">
-                                    <i class="bi bi-tag me-1"></i>Categoría
-                                </label>
-                                <select name="categoria" class="form-select">
-                                    <option value="">Todas las categorías</option>
-                                    {% for categoria in categorias %}
-                                        <option value="{{ categoria.id }}" 
-                                                {% if categoria_seleccionada == categoria.id %}selected{% endif %}>
-                                            {{ categoria.nombre }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            
-                            <!-- Filtro por área -->
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">
-                                    <i class="bi bi-geo-alt me-1"></i>Área
-                                </label>
-                                <select name="area" class="form-select">
-                                    <option value="">Todas las áreas</option>
-                                    {% for area in areas %}
-                                        <option value="{{ area.id }}" 
-                                                {% if area_seleccionada == area.id %}selected{% endif %}>
-                                            {{ area.nombre }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            
-                            <!-- Filtro por stock -->
-                            <div class="col-md-2">
-                                <label class="form-label fw-bold">
-                                    <i class="bi bi-bar-chart me-1"></i>Stock
-                                </label>
+                    <form method="get" class="row g-3 align-items-end" id="formFiltros">
+                        <div class="col-md-4">
+                            <label class="form-label">Buscar</label>
+                            <input type="text" name="q" value="{{ busqueda|default:'' }}" class="form-control" placeholder="Nombre, código o descripción">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Categoría</label>
+                            <select name="categoria" class="form-select">
+                                <option value="">Todas</option>
+                                {% for categoria in categorias %}
+                                <option value="{{ categoria.id }}" {% if categoria_seleccionada == categoria.id %}selected{% endif %}>{{ categoria.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Área</label>
+                            <select name="area" class="form-select">
+                                <option value="">Todas</option>
+                                {% for area in areas %}
+                                <option value="{{ area.id }}" {% if area_seleccionada == area.id %}selected{% endif %}>{{ area.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-grid">
+                            <button type="submit" class="btn btn-primary">Filtrar</button>
+                        </div>
+                        <div class="col-12 d-flex flex-wrap gap-2">
+                            <div>
+                                <label class="form-label mb-0">Estado de stock</label>
                                 <select name="stock" class="form-select">
                                     <option value="">Todos</option>
-                                    <option value="bajo" {% if stock_filtro == 'bajo' %}selected{% endif %}>Stock bajo</option>
-                                    <option value="agotado" {% if stock_filtro == 'agotado' %}selected{% endif %}>Agotados</option>
                                     <option value="disponible" {% if stock_filtro == 'disponible' %}selected{% endif %}>Con stock</option>
+                                    <option value="bajo" {% if stock_filtro == 'bajo' %}selected{% endif %}>Stock bajo</option>
+                                    <option value="agotado" {% if stock_filtro == 'agotado' %}selected{% endif %}>Sin stock</option>
                                 </select>
                             </div>
-                        </div>
-                        
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary me-2">
-                                    <i class="bi bi-search me-1"></i>Buscar
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros()">
-                                    <i class="bi bi-x-circle me-1"></i>Limpiar
-                                </button>
-                                
-                                <!-- Resumen de filtros aplicados -->
-                                <div class="d-inline-block ms-3">
-                                    {% if busqueda or categoria_seleccionada or area_seleccionada or stock_filtro %}
-                                        <small class="text-muted">
-                                            <i class="bi bi-filter me-1"></i>
-                                            Filtros aplicados:
-                                            {% if busqueda %}
-                                                <span class="badge bg-info me-1">Búsqueda: "{{ busqueda }}"</span>
-                                            {% endif %}
-                                            {% if categoria_seleccionada %}
-                                                <span class="badge bg-primary me-1">
-                                                    {% for cat in categorias %}
-                                                        {% if cat.id == categoria_seleccionada %}{{ cat.nombre }}{% endif %}
-                                                    {% endfor %}
-                                                </span>
-                                            {% endif %}
-                                            {% if area_seleccionada %}
-                                                <span class="badge bg-success me-1">
-                                                    {% for area in areas %}
-                                                        {% if area.id == area_seleccionada %}{{ area.nombre }}{% endif %}
-                                                    {% endfor %}
-                                                </span>
-                                            {% endif %}
-                                            {% if stock_filtro %}
-                                                <span class="badge bg-warning me-1">{{ stock_filtro|capfirst }}</span>
-                                            {% endif %}
-                                        </small>
-                                    {% endif %}
-                                </div>
+                            <div>
+                                <label class="form-label mb-0">Ordenar por</label>
+                                <select name="orden" class="form-select">
+                                    <option value="categoria__nombre" {% if orden_actual == 'categoria__nombre' %}selected{% endif %}>Categoría</option>
+                                    <option value="nombre" {% if orden_actual == 'nombre' %}selected{% endif %}>Nombre (A-Z)</option>
+                                    <option value="-nombre" {% if orden_actual == '-nombre' %}selected{% endif %}>Nombre (Z-A)</option>
+                                    <option value="stock_total" {% if orden_actual == 'stock_total' %}selected{% endif %}>Stock ascendente</option>
+                                    <option value="-stock_total" {% if orden_actual == '-stock_total' %}selected{% endif %}>Stock descendente</option>
+                                    <option value="-fecha_creacion" {% if orden_actual == '-fecha_creacion' %}selected{% endif %}>Más recientes</option>
+                                </select>
+                            </div>
+                            <div class="align-self-end">
+                                <a href="{% url 'inventario:productos' %}" class="btn btn-light">Limpiar filtros</a>
                             </div>
                         </div>
                     </form>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Ejemplo visual (colapsable) -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="accordion">
-                <div class="accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ejemploVisual">
-                            <i class="bi bi-lightbulb me-2"></i>
-                            💡 ¿No sabes qué botón usar? Ver ejemplos
-                        </button>
-                    </h2>
-                    <div id="ejemploVisual" class="accordion-collapse collapse">
-                        <div class="accordion-body">
-                            <div class="row text-center">
-                                <div class="col-md-6">
-                                    <div class="card h-100 border-success">
-                                        <div class="card-body">
-                                            <div class="display-1 mb-3">🆕</div>
-                                            <h5 class="text-success">Nuevo Producto</h5>
-                                            <p class="text-muted small">
-                                                Usa este botón cuando sea la <strong>primera vez</strong> que compras algo
-                                            </p>
-                                            <div class="text-start small">
-                                                <strong>Ejemplo:</strong><br>
-                                                "Compré shampoo coreano por primera vez"<br>
-                                                "Necesito agregar este producto nuevo a mi inventario"
-                                            </div>
-                                        </div>
-                                    </div>
+            {% if productos %}
+            <div class="row g-3" id="listaProductos">
+                {% for producto in productos %}
+                <div class="col-12 col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h5 class="card-title mb-1">{{ producto.nombre }}</h5>
+                                    <small class="text-muted">Código: {{ producto.codigo }}</small>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="card h-100 border-warning">
-                                        <div class="card-body">
-                                            <div class="display-1 mb-3">📥</div>
-                                            <h5 class="text-warning">Entrada de Stock</h5>
-                                            <p class="text-muted small">
-                                                Usa este botón cuando ya tienes el producto y compraste <strong>más cantidad</strong>
-                                            </p>
-                                            <div class="text-start small">
-                                                <strong>Ejemplo:</strong><br>
-                                                "Ya tengo shampoo coreano, pero compré más"<br>
-                                                "Quiero agregar las 5 unidades que compré hoy"
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                {% if producto.categoria %}
+                                <span class="badge bg-secondary">{{ producto.categoria.nombre }}</span>
+                                {% endif %}
+                            </div>
+
+                            <p class="text-muted mb-3">Stock total: <strong>{{ producto.stock_total|default:0 }}</strong> {{ producto.unidad_medida }}</p>
+
+                            {% if producto.stock_total|default:0 == 0 %}
+                            <div class="alert alert-danger py-2 mb-3">
+                                <i class="bi bi-exclamation-octagon me-2"></i>Sin stock disponible
+                            </div>
+                            {% elif producto.stock_total <= producto.stock_minimo %}
+                            <div class="alert alert-warning py-2 mb-3">
+                                <i class="bi bi-exclamation-triangle me-2"></i>Stock bajo (mínimo {{ producto.stock_minimo }})
+                            </div>
+                            {% endif %}
+
+                            {% if producto.areas_con_stock %}
+                            <div class="mb-3">
+                                <h6 class="fw-semibold mb-2">Stock por área</h6>
+                                <ul class="list-unstyled mb-0 small">
+                                    {% for item in producto.areas_con_stock %}
+                                    <li class="d-flex justify-content-between">
+                                        <span>{{ item.area__nombre }}</span>
+                                        <span>{{ item.cantidad }} {{ producto.unidad_medida }}</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+
+                            <div class="mt-auto d-flex gap-2">
+                                <a class="btn btn-outline-primary w-100" href="{% url 'inventario:detalle_producto' producto.id %}">
+                                    <i class="bi bi-eye me-1"></i> Ver detalle
+                                </a>
+                                <a class="btn btn-outline-secondary w-100" href="{% url 'inventario:entrada_stock' %}?producto={{ producto.id }}">
+                                    <i class="bi bi-plus-circle me-1"></i> Agregar stock
+                                </a>
                             </div>
                         </div>
                     </div>
                 </div>
+                {% endfor %}
             </div>
-        </div>
-    </div>
-
-    <!-- Resultados de la búsqueda -->
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="bi bi-boxes me-2"></i>
-                    Productos encontrados
-                    <span class="badge bg-secondary">{{ total_productos }}</span>
-                    {% if page_obj.paginator.num_pages > 1 %}
-                        <small class="text-muted ms-2">
-                            (página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }})
-                        </small>
+            {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5 text-muted">
+                    <i class="bi bi-inbox display-5 d-block mb-3"></i>
+                    {% if busqueda or categoria_seleccionada or area_seleccionada or stock_filtro %}
+                        No encontramos productos que coincidan con los filtros seleccionados.
+                    {% else %}
+                        Todavía no hay productos registrados. Crea tu primer producto para comenzar.
                     {% endif %}
-                </h5>
-                
-                <!-- Ordenamiento -->
-                <div class="dropdown">
-                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-sort-down me-1"></i>Ordenar por
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url_with_params orden='nombre' %}">
-                            <i class="bi bi-sort-alpha-down me-2"></i>Nombre A-Z
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url_with_params orden='-nombre' %}">
-                            <i class="bi bi-sort-alpha-up me-2"></i>Nombre Z-A
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url_with_params orden='categoria__nombre' %}">
-                            <i class="bi bi-tag me-2"></i>Categoría
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url_with_params orden='codigo' %}">
-                            <i class="bi bi-upc me-2"></i>Código
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url_with_params orden='-fecha_creacion' %}">
-                            <i class="bi bi-clock me-2"></i>Más recientes
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url_with_params orden='stock_total' %}">
-                            <i class="bi bi-bar-chart me-2"></i>Menos stock
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url_with_params orden='-stock_total' %}">
-                            <i class="bi bi-bar-chart-fill me-2"></i>Más stock
-                        </a></li>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if page_obj.has_other_pages %}
+            <nav class="mt-4" aria-label="Paginación de productos">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if busqueda %}&q={{ busqueda }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}{% if area_seleccionada %}&area={{ area_seleccionada }}{% endif %}{% if stock_filtro %}&stock={{ stock_filtro }}{% endif %}{% if orden_actual %}&orden={{ orden_actual }}{% endif %}">Primera</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if busqueda %}&q={{ busqueda }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}{% if area_seleccionada %}&area={{ area_seleccionada }}{% endif %}{% if stock_filtro %}&stock={{ stock_filtro }}{% endif %}{% if orden_actual %}&orden={{ orden_actual }}{% endif %}">Anterior</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item active"><span class="page-link">{{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if busqueda %}&q={{ busqueda }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}{% if area_seleccionada %}&area={{ area_seleccionada }}{% endif %}{% if stock_filtro %}&stock={{ stock_filtro }}{% endif %}{% if orden_actual %}&orden={{ orden_actual }}{% endif %}">Siguiente</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if busqueda %}&q={{ busqueda }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}{% if area_seleccionada %}&area={{ area_seleccionada }}{% endif %}{% if stock_filtro %}&stock={{ stock_filtro }}{% endif %}{% if orden_actual %}&orden={{ orden_actual }}{% endif %}">Última</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+
+        <div class="col-12 col-lg-3">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-lightbulb me-2"></i>
+                    ¿Cómo decido qué acción tomar?
+                </div>
+                <div class="card-body small">
+                    <p class="mb-2"><strong>🆕 Nuevo producto</strong></p>
+                    <p class="text-muted">Regístralo cuando nunca antes lo has comprado o aún no aparece en tu inventario.</p>
+                    <hr>
+                    <p class="mb-2"><strong>📥 Entrada de stock</strong></p>
+                    <p class="text-muted">Úsala cuando repongas un producto ya existente o necesites mover unidades a un área específica.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Tips rápidos
+                </div>
+                <div class="card-body small">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-3">
+                            <strong>Filtros combinados</strong><br>
+                            Aplica búsqueda, categoría y área a la vez para localizar productos puntuales.
+                        </li>
+                        <li class="mb-3">
+                            <strong>Orden dinámico</strong><br>
+                            Cambia el orden para identificar rápidamente los productos con menos stock.
+                        </li>
+                        <li>
+                            <strong>Detalle completo</strong><br>
+                            Desde "Ver detalle" revisa movimientos, stock por área y alertas activas.
+                        </li>
                     </ul>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Lista de productos -->
-    {% if productos %}
-    <div class="row">
-        {% for producto in productos %}
-        <div class="col-lg-4 col-md-6 mb-4">
-            <div class="card product-card h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div class="flex-grow-1">
-                            <h6 class="card-title mb-1">{{ producto.nombre }}</h6>
-                            <small class="text-muted">
-                                <i class="bi bi-upc me-1"></i>{{ producto.codigo }}
-                            </small>
-                        </div>
-                        <span class="badge bg-primary">{{ producto.categoria.nombre }}</span>
-                    </div>
-                    
-                    <!-- Stock info -->
-                    <div class="mb-3">
-                        {% with stock_total=producto.stock_total %}
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <small class="text-muted">Stock Total:</small>
-                            <strong class="{% if stock_total <= producto.stock_minimo %}text-warning{% elif stock_total == 0 %}text-danger{% else %}text-success{% endif %}">
-                                {{ stock_total|default:"0" }} {{ producto.unidad_medida }}
-                            </strong>
-                        </div>
-                        
-                        <!-- Indicador de stock -->
-                        {% if stock_total == 0 %}
-                            <div class="alert alert-danger py-1 px-2 mb-2">
-                                <small><i class="bi bi-exclamation-triangle me-1"></i>Sin stock</small>
-                            </div>
-                        {% elif stock_total <= producto.stock_minimo %}
-                            <div class="alert alert-warning py-1 px-2 mb-2">
-                                <small><i class="bi bi-exclamation-circle me-1"></i>Stock bajo</small>
-                            </div>
-                        {% endif %}
-                        
-                        <!-- Áreas donde está -->
-                        {% if producto.areas_con_stock %}
-                            <small class="text-muted">
-                                <i class="bi bi-geo-alt me-1"></i>
-                                En: 
-                                {% for area in producto.areas_con_stock %}
-                                    <span class="badge bg-light text-dark">{{ area.area__nombre }}</span>
-                                {% endfor %}
-                            </small>
-                        {% endif %}
-                        {% endwith %}
-                    </div>
-                    
-                    <!-- Precio -->
-                    {% if producto.precio_unitario %}
-                    <div class="mb-3">
-                        <small class="text-muted">Precio referencial:</small>
-                        <strong class="text-success">{{ producto.precio_unitario|format_currency }}</strong>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- Botones de acción -->
-                    <div class="d-flex gap-1">
-                        <button type="button" class="btn btn-outline-info btn-sm" 
-                                data-bs-toggle="modal" data-bs-target="#modalProducto{{ producto.id }}"
-                                data-bs-toggle="tooltip" title="Vista rápida">
-                            <i class="bi bi-eye-fill"></i>
-                        </button>
-                        <a href="{% url 'inventario:detalle_producto' producto.id %}" 
-                           class="btn btn-outline-primary btn-sm flex-fill"
-                           data-bs-toggle="tooltip" title="Ver detalles completos">
-                            <i class="bi bi-clipboard-data me-1"></i>Detalles
-                        </a>
-                        <a href="{% url 'inventario:entrada_stock' %}?producto={{ producto.id }}" 
-                           class="btn btn-warning btn-sm"
-                           data-bs-toggle="tooltip" title="Agregar más stock">
-                            <i class="bi bi-plus-lg me-1"></i>Stock
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    
-    <!-- Paginación -->
-    {% if page_obj.paginator.num_pages > 1 %}
-    <div class="row mt-4">
-        <div class="col-12">
-            <nav aria-label="Paginación de productos">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="{% url_with_params page=1 %}">
-                                <i class="bi bi-chevron-double-left"></i>
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="{% url_with_params page=page_obj.previous_page_number %}">
-                                <i class="bi bi-chevron-left"></i>
-                            </a>
-                        </li>
-                    {% endif %}
-                    
-                    {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                            <li class="page-item active">
-                                <span class="page-link">{{ num }}</span>
-                            </li>
-                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                            <li class="page-item">
-                                <a class="page-link" href="{% url_with_params page=num %}">{{ num }}</a>
-                            </li>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="{% url_with_params page=page_obj.next_page_number %}">
-                                <i class="bi bi-chevron-right"></i>
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="{% url_with_params page=page_obj.paginator.num_pages %}">
-                                <i class="bi bi-chevron-double-right"></i>
-                            </a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
-    </div>
-    {% endif %}
-    
-    {% else %}
-    <div class="row">
-        <div class="col-12 text-center py-5">
-            {% if busqueda or categoria_seleccionada or area_seleccionada or stock_filtro %}
-                <div class="display-1 mb-4">🔍</div>
-                <h3>No se encontraron productos</h3>
-                <p class="text-muted mb-4">Intenta cambiar los filtros de búsqueda</p>
-                <button class="btn btn-outline-secondary" onclick="limpiarFiltros()">
-                    <i class="bi bi-x-circle me-2"></i>
-                    Limpiar Filtros
-                </button>
-            {% else %}
-                <div class="display-1 mb-4">📦</div>
-                <h3>No tienes productos aún</h3>
-                <p class="text-muted mb-4">Comienza agregando tu primer producto</p>
-                <a href="{% url 'inventario:agregar_producto' %}" class="btn btn-success btn-lg">
-                    <i class="bi bi-plus-circle me-2"></i>
-                    Agregar mi Primer Producto
-                </a>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
 </div>
-
-<!-- Modales de vista rápida -->
-{% for producto in productos %}
-<div class="modal fade" id="modalProducto{{ producto.id }}" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="bi bi-box me-2"></i>
-                    {{ producto.nombre }}
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6 class="text-primary">Información General</h6>
-                        <table class="table table-sm">
-                            <tr>
-                                <td><strong>Código:</strong></td>
-                                <td>{{ producto.codigo }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Categoría:</strong></td>
-                                <td><span class="badge bg-primary">{{ producto.categoria.nombre }}</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Unidad:</strong></td>
-                                <td>{{ producto.unidad_medida }}</td>
-                            </tr>
-                            {% if producto.precio_unitario %}
-                            <tr>
-                                <td><strong>Precio:</strong></td>
-                                <td class="text-success fw-bold">{{ producto.precio_unitario|format_currency }}</td>
-                            </tr>
-                            {% endif %}
-                            <tr>
-                                <td><strong>Stock mínimo:</strong></td>
-                                <td>{{ producto.stock_minimo }} {{ producto.unidad_medida }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="text-success">Stock por Área</h6>
-                        {% if producto.areas_con_stock %}
-                            <div class="list-group list-group-flush">
-                                {% for area in producto.areas_con_stock %}
-                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                    <small>{{ area.area__nombre }}</small>
-                                    <span class="badge bg-success">{{ area.cantidad }} {{ producto.unidad_medida }}</span>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            <hr>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <strong>Total:</strong>
-                                <strong class="text-primary">{{ producto.stock_total|default:"0" }} {{ producto.unidad_medida }}</strong>
-                            </div>
-                        {% else %}
-                            <div class="alert alert-warning">
-                                <i class="bi bi-exclamation-triangle me-2"></i>
-                                No hay stock disponible
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                {% if producto.descripcion %}
-                <hr>
-                <h6 class="text-secondary">Descripción</h6>
-                <p class="text-muted">{{ producto.descripcion }}</p>
-                {% endif %}
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                <a href="{% url 'inventario:detalle_producto' producto.id %}" class="btn btn-primary">
-                    <i class="bi bi-clipboard-data me-1"></i>Ver Detalles Completos
-                </a>
-                <a href="{% url 'inventario:entrada_stock' %}?producto={{ producto.id }}" class="btn btn-warning">
-                    <i class="bi bi-plus-lg me-1"></i>Agregar Stock
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-{% endfor %}
-
-<style>
-.product-card {
-    transition: transform 0.2s ease-in-out;
-}
-
-.product-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-}
-
-.badge {
-    font-size: 0.75em;
-}
-
-.alert {
-    font-size: 0.875em;
-}
-</style>
-
-<script>
-// Función para limpiar filtros
-function limpiarFiltros() {
-    // Limpiar todos los campos del formulario
-    document.querySelector('input[name="q"]').value = '';
-    document.querySelector('select[name="categoria"]').value = '';
-    document.querySelector('select[name="area"]').value = '';
-    document.querySelector('select[name="stock"]').value = '';
-    
-    // Enviar formulario vacío
-    document.getElementById('filtroForm').submit();
-}
-
-// Búsqueda en tiempo real (opcional)
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.querySelector('input[name="q"]');
-    let searchTimeout;
-    
-    // Búsqueda con debounce
-    searchInput.addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            if (this.value.length >= 3 || this.value.length === 0) {
-                // Auto-submit solo si hay 3+ caracteres o está vacío
-                // document.getElementById('filtroForm').submit();
-            }
-        }, 500);
-    });
-    
-    // Submit automático al cambiar selects
-    const selects = document.querySelectorAll('#filtroForm select');
-    selects.forEach(select => {
-        select.addEventListener('change', function() {
-            document.getElementById('filtroForm').submit();
-        });
-    });
-    
-    // Inicializar tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-});
-
-// Función para resaltar texto de búsqueda
-function resaltarBusqueda() {
-    const busqueda = '{{ busqueda|escapejs }}';
-    if (busqueda) {
-        const productos = document.querySelectorAll('.card-title, .text-muted');
-        productos.forEach(el => {
-            const texto = el.innerHTML;
-            const regex = new RegExp(`(${busqueda})`, 'gi');
-            el.innerHTML = texto.replace(regex, '<mark>$1</mark>');
-        });
-    }
-}
-
-// Ejecutar después de cargar la página
-document.addEventListener('DOMContentLoaded', resaltarBusqueda);
-</script>
 {% endblock %}

@@ -1,0 +1,93 @@
+<!-- Archivo deshabilitado: Gantt removido del proyecto -->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gantt - Proyecto Integrado TIHI43</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📈%3C/text%3E%3C/svg%3E"/>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; margin: 0; background: #f7f8fa; color: #1f2937; }
+    header { background: white; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; position: sticky; top: 0; z-index: 10; }
+    h1 { font-size: 18px; margin: 0; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+    .card { background: white; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); padding: 16px; }
+    .meta { color: #6b7280; font-size: 14px; margin-top: 4px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 6px; font-size: 13px; color: #374151; }
+    .legend .tag { display: inline-flex; align-items: center; gap: 6px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 999px; padding: 4px 10px; }
+    .tag .dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
+    .tag.diego .dot { background: #2563eb; }
+    .tag.gabriel .dot { background: #059669; }
+    .tag.valentina .dot { background: #7c3aed; }
+    .tag.camila .dot { background: #dc2626; }
+    .mermaid { background: white; border: 1px solid #e5e7eb; border-radius: 10px; overflow: auto; }
+  </style>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'default', themeVariables: { primaryColor: '#2563eb'} });
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Diagrama de Gantt — Proyecto Integrado TIHI43</h1>
+    <div class="meta">Inicio estimado: 2025-10-22 • Duración estimada: 4 semanas • Ajusta fechas/propietarios según tu realidad</div>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <div class="legend">
+        <span class="tag valentina"><span class="dot"></span>Valentina Pérez — PM/BA</span>
+        <span class="tag diego"><span class="dot"></span>Diego Henríquez — Backend</span>
+        <span class="tag gabriel"><span class="dot"></span>Gabriel Ruiz — Frontend</span>
+        <span class="tag camila"><span class="dot"></span>Camila Torres — QA</span>
+      </div>
+      <div class="mermaid">
+      gantt
+        title Gantt del Proyecto (API Tipo 1/2)
+        dateFormat  YYYY-MM-DD
+        axisFormat  %d/%m
+        excludes    weekends
+
+        section Actividad 1 · Metodología y Plan
+        Selección de metodología [Valentina]       :active, a1_m1, 2025-10-22, 2d
+        Cronograma e hitos [Valentina]             :a1_m2, after a1_m1, 2d
+        Backlog + criterios de aceptación [Valentina] :a1_m3, after a1_m2, 2d
+        Plan Sprint 1 [Valentina]                  :a1_m4, after a1_m3, 1d
+        Tablero Kanban (Trello/Jira) [Valentina]   :a1_m5, after a1_m4, 1d
+
+        section Actividad 2 · Arquitectura 4+1
+        Vista lógica (clases/seq/comm) [Diego]     :a2_v1, 2025-10-29, 3d
+        Vista desarrollo (componentes/paquetes) [Diego] :a2_v2, after a2_v1, 2d
+  Vista procesos (actividades/BPMN) [Valentina]   :a2_v3, 2025-10-29, 3d
+        Vista física (topología) [Diego]           :a2_v4, after a2_v2, 1d
+        Casos de uso (escenarios) [Valentina]      :a2_v5, after a2_v3, 2d
+
+        section Actividad 3 · UI/UX
+        Perfiles y funcionalidades clave [Valentina] :a3_u1, 2025-11-04, 1d
+        Arquitectura de información [Valentina]    :a3_u2, after a3_u1, 1d
+        Mapa del sitio / navegación [Valentina]    :a3_u3, after a3_u2, 1d
+        Prototipo baja fidelidad [Gabriel]         :a3_u4, after a3_u3, 2d
+        Prototipo alta fidelidad [Gabriel]         :a3_u5, after a3_u4, 3d
+
+        section Actividad 4 · Datos
+        Modelo estructurado (ERD) [Diego]          :a4_d1, 2025-11-06, 2d
+        Modelo no estructurado (doc/key-value) [Diego] :a4_d2, after a4_d1, 2d
+        Integración y sincronización [Diego]       :a4_d3, after a4_d2, 2d
+
+        section Actividad 5 · Seguridad
+        Roles y permisos [Diego]                   :a5_s1, 2025-11-10, 1d
+        Estándares de codificación segura [Diego]  :a5_s2, after a5_s1, 2d
+        Políticas auth/errores/cifrado [Diego]     :a5_s3, after a5_s2, 2d
+
+        section Actividad 6 · Pruebas
+        Plan de pruebas [Camila]                   :a6_p1, 2025-11-12, 1d
+        Casos funcionales e integración [Camila]   :a6_p2, after a6_p1, 2d
+        Pruebas de seguridad (OWASP) [Camila]      :a6_p3, after a6_p2, 1d
+        Pruebas de rendimiento [Camila]            :a6_p4, after a6_p3, 1d
+        Pruebas de usabilidad [Camila]             :a6_p5, after a6_p4, 1d
+        Informe final y presentación [Todos]       :milestone, a6_p6, 2025-11-19, 1d
+      </div>
+    </div>
+  </div>
+</body>
+</html>

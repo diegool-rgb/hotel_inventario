@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Kanban — Proyecto{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <i class="bi bi-kanban me-2"></i>
+    Tablero Kanban — con responsables
+  </h1>
+  <p class="page-subtitle">Toma la captura aquí. Puedes mover tarjetas en una versión interactiva a pedido.</p>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card card-professional">
+      <div class="card-header card-header-professional"><strong>Por Hacer</strong></div>
+      <div class="card-body">
+        {% for t in tarjetas.todo %}
+        <div class="p-2 mb-2 border rounded">
+          <div class="fw-semibold">{{ t.titulo }}</div>
+          <small class="text-muted">{{ t.owner }}</small>
+        </div>
+        {% empty %}<div class="text-muted">—</div>{% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card card-professional">
+      <div class="card-header card-header-professional"><strong>En Progreso</strong></div>
+      <div class="card-body">
+        {% for t in tarjetas.doing %}
+        <div class="p-2 mb-2 border rounded">
+          <div class="fw-semibold">{{ t.titulo }}</div>
+          <small class="text-muted">{{ t.owner }}</small>
+        </div>
+        {% empty %}<div class="text-muted">—</div>{% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card card-professional">
+      <div class="card-header card-header-professional"><strong>Terminado</strong></div>
+      <div class="card-body">
+        {% for t in tarjetas.done %}
+        <div class="p-2 mb-2 border rounded">
+          <div class="fw-semibold">{{ t.titulo }}</div>
+          <small class="text-muted">{{ t.owner }}</small>
+        </div>
+        {% empty %}<div class="text-muted">—</div>{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -255,7 +255,7 @@ class EntradaStock(models.Model):
         ('DEVOLUCION', 'Devolución'),
     ]
     
-    numero_entrada = models.CharField(max_length=50, unique=True, help_text="Número de factura o documento")
+    numero_entrada = models.CharField(max_length=50, unique=False, blank=True, help_text="Número de factura/boleta (opcional)")
     tipo = models.CharField(max_length=20, choices=TIPOS_ENTRADA, default='COMPRA')
     proveedor = models.ForeignKey(Proveedor, on_delete=models.PROTECT, related_name='entradas', null=True, blank=True)
     fecha_compra = models.DateField(help_text="Fecha de la compra/factura")
@@ -315,3 +315,20 @@ class DetalleEntradaStock(models.Model):
         if self.precio_unitario:
             return self.cantidad * self.precio_unitario
         return None
+
+
+# Enlace opcional de movimientos con facturas para mejor trazabilidad
+Movimiento.add_to_class('entrada', models.ForeignKey(
+    EntradaStock,
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name='movimientos'
+))
+Movimiento.add_to_class('detalle_entrada', models.ForeignKey(
+    DetalleEntradaStock,
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name='movimientos'
+))

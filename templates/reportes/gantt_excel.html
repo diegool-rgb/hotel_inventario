@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% block title %}Gantt (Estilo Excel){% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <i class="bi bi-bar-chart-steps me-2"></i>
+    Gantt (Estilo Excel) — con responsables
+  </h1>
+  <p class="page-subtitle">Toma la captura aquí. Puedes ajustar fechas/duración en el código si lo requieres.</p>
+</div>
+
+<div class="card card-professional">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-professional align-middle mb-3" id="tabla-tareas">
+        <thead>
+          <tr>
+            <th>Actividad</th>
+            <th>Responsable</th>
+            <th>Inicio</th>
+            <th>Duración (días)</th>
+            <th>Fin</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="border rounded p-2" id="gantt-container">
+      <div id="gantt-grid" class="gantt-grid"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  #gantt-container { overflow-x: auto; background: #fff; }
+  .gantt-grid { position: relative; min-width: 900px; }
+  .gantt-header { position: sticky; top: 0; background: #f8f9fa; z-index: 2; display: grid; grid-auto-flow: column; border-bottom: 1px solid #e5e7eb; }
+  .gantt-header .cell { padding: 6px 8px; font-size: 12px; text-align: center; color: #6b7280; border-left: 1px solid #f1f5f9; }
+  .gantt-row { display: grid; grid-auto-flow: column; position: relative; border-bottom: 1px solid #f1f5f9; height: 32px; }
+  .gantt-row .cell { border-left: 1px solid #f8fafc; }
+  .bar { position: absolute; height: 22px; border-radius: 6px; background: #3b82f6; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; white-space: nowrap; padding: 0 6px; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .bar[data-owner="Diego Henriquez"] { background: #2563eb; }
+  .bar[data-owner="Gabriel Ruiz"] { background: #059669; }
+  .bar[data-owner="Isaac Venegasz"] { background: #7c3aed; }
+  .bar[data-owner="Miguel Barria"] { background: #dc2626; }
+  .bar[data-owner="Simon"] { background: #f59e0b; color: #111827; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  // Configuración
+  const startDate = new Date('2025-10-22'); // inicio del eje
+  const totalDays = 28; // 4 semanas aprox
+  const dayMs = 24*60*60*1000;
+
+  // Tareas (ajusta si lo necesitas)
+  const tasks = [
+    { activity: 'Selección de metodología', owner: 'Isaac Venegasz', start: '2025-10-22', duration: 2 },
+    { activity: 'Cronograma e hitos', owner: 'Isaac Venegasz', start: '2025-10-24', duration: 2 },
+    { activity: 'Backlog + criterios de aceptación', owner: 'Isaac Venegasz', start: '2025-10-27', duration: 2 },
+    { activity: 'Plan Sprint 1', owner: 'Miguel Barria', start: '2025-10-29', duration: 1 },
+    { activity: 'Tablero Kanban', owner: 'Simon', start: '2025-10-30', duration: 1 },
+    { activity: 'Vista lógica (clases/seq/comm)', owner: 'Diego Henriquez', start: '2025-10-29', duration: 3 },
+    { activity: 'Vista desarrollo (componentes/paquetes)', owner: 'Diego Henriquez', start: '2025-11-03', duration: 2 },
+    { activity: 'Vista procesos (BPMN)', owner: 'Isaac Venegasz', start: '2025-10-29', duration: 3 },
+    { activity: 'Casos de uso (escenarios)', owner: 'Simon', start: '2025-11-03', duration: 2 },
+    { activity: 'Prototipo baja fidelidad', owner: 'Gabriel Ruiz', start: '2025-11-07', duration: 2 },
+    { activity: 'Prototipo alta fidelidad', owner: 'Gabriel Ruiz', start: '2025-11-11', duration: 3 },
+    { activity: 'ERD (Modelo estructurado)', owner: 'Diego Henriquez', start: '2025-11-06', duration: 2 },
+    { activity: 'Modelo no estructurado', owner: 'Diego Henriquez', start: '2025-11-10', duration: 2 },
+    { activity: 'Integración y sincronización', owner: 'Diego Henriquez', start: '2025-11-12', duration: 2 },
+    { activity: 'Roles y permisos', owner: 'Miguel Barria', start: '2025-11-10', duration: 1 },
+    { activity: 'Estándares de codificación segura', owner: 'Diego Henriquez', start: '2025-11-11', duration: 2 },
+    { activity: 'Auth/errores/cifrado', owner: 'Diego Henriquez', start: '2025-11-13', duration: 2 },
+    { activity: 'Plan de pruebas', owner: 'Miguel Barria', start: '2025-11-12', duration: 1 },
+    { activity: 'Pruebas de integración', owner: 'Miguel Barria', start: '2025-11-13', duration: 2 },
+    { activity: 'Pruebas OWASP', owner: 'Miguel Barria', start: '2025-11-17', duration: 1 },
+    { activity: 'Rendimiento', owner: 'Miguel Barria', start: '2025-11-18', duration: 1 },
+    { activity: 'Usabilidad', owner: 'Simon', start: '2025-11-19', duration: 1 },
+  ];
+
+  // Construir cabecera de días
+  const grid = document.getElementById('gantt-grid');
+  const header = document.createElement('div');
+  header.className = 'gantt-header';
+  header.style.gridTemplateColumns = `repeat(${totalDays}, 40px)`;
+  for (let d=0; d<totalDays; d++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const date = new Date(startDate.getTime() + d*dayMs);
+    const label = date.toLocaleDateString('es-CL', { day:'2-digit', month:'short' });
+    cell.textContent = label;
+    header.appendChild(cell);
+  }
+  grid.appendChild(header);
+
+  // Filas y barras
+  tasks.forEach((t, idx) => {
+    const row = document.createElement('div');
+    row.className = 'gantt-row';
+    row.style.gridTemplateColumns = `repeat(${totalDays}, 40px)`;
+    for (let d=0; d<totalDays; d++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      row.appendChild(cell);
+    }
+    // barra
+    const s = new Date(t.start);
+    const offsetDays = Math.max(0, Math.floor((s - startDate) / dayMs));
+    const width = Math.min(t.duration, totalDays - offsetDays) * 40; // 40px por día
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.dataset.owner = t.owner;
+    bar.style.left = `${offsetDays*40 + 2}px`;
+    bar.style.top = `${5}px`;
+    bar.style.width = `${Math.max(0, width-4)}px`;
+    bar.textContent = t.duration;
+    row.appendChild(bar);
+    grid.appendChild(row);
+  });
+
+  // Tabla (con cálculo de Fin)
+  const tbody = document.querySelector('#tabla-tareas tbody');
+  tasks.forEach(t => {
+    const tr = document.createElement('tr');
+    const start = new Date(t.start);
+    const end = new Date(start.getTime() + (t.duration*dayMs));
+    const fmt = d => d.toLocaleDateString('es-CL');
+    tr.innerHTML = `
+      <td>${t.activity}</td>
+      <td>${t.owner}</td>
+      <td>${fmt(start)}</td>
+      <td>${t.duration}</td>
+      <td>${fmt(end)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+})();
+</script>
+{% endblock %}

@@ -25,7 +25,20 @@ SECRET_KEY = 'django-insecure-iot1#uvl&y5t6hjgdu@la81w4kbqv^ke4az4o(@@4qdb!=fr-u
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Permitir acceso desde la red local (PC y celulares)
+# Agrega aquí las IPs locales desde las que accederás en desarrollo
+ALLOWED_HOSTS = [
+    '127.0.0.1', 'localhost', 'testserver',
+    # LAN (PC y celular en red local)
+    '192.168.1.5', '192.168.1.4',
+    # Dominio de producción en PythonAnywhere (ajusta con tu usuario)
+    'diegoo17.pythonanywhere.com',
+]
+
+# Si más adelante activas HTTPS en producción, agrega el origen aquí para formularios/CSRF
+CSRF_TRUSTED_ORIGINS = [
+    'https://diegoo17.pythonanywhere.com',
+]
 
 
 # Application definition
@@ -37,6 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
     # Apps del proyecto
     'inventario',
     'pedidos',

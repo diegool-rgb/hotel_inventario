@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block title %}No disponible{% endblock %}
+{% block content %}
+<div class="container">
+	<div class="alert alert-info">Esta página fue deshabilitada.</div>
+	<a class="btn btn-secondary" href="{% url 'reportes:lista' %}">Volver a Reportes</a>
+</div>
+{% endblock %}

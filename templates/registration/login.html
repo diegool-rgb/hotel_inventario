@@ -1,104 +1,562 @@
-{% extends 'base.html' %}
-{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Presidente - Sistema de Inventario</title>
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --hotel-gold: #D4AF37;
+            --hotel-dark: #1a1a1a;
+            --hotel-blue: #2c3e50;
+            --hotel-light: #f8f9fa;
+            --shadow-soft: 0 10px 40px rgba(0,0,0,0.1);
+            --shadow-hard: 0 20px 60px rgba(0,0,0,0.2);
+        }
 
-{% block title %}Iniciar Sesión - Sistema de Inventario Hotelero{% endblock %}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-{% block content %}
-<div class="container-fluid">
-    <div class="row justify-content-center align-items-center min-vh-100">
-        <div class="col-md-6 col-lg-4">
-            <div class="card shadow-lg border-0">
-                <div class="card-header bg-primary text-white text-center">
-                    <h3 class="mb-0">
-                        <i class="fas fa-hotel me-2"></i>
-                        Sistema de Inventario Hotelero
-                    </h3>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animación de partículas flotantes */
+        .floating-particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .particle:nth-child(1) { width: 80px; height: 80px; left: 10%; animation-delay: 0s; }
+        .particle:nth-child(2) { width: 60px; height: 60px; left: 20%; animation-delay: 2s; }
+        .particle:nth-child(3) { width: 40px; height: 40px; left: 70%; animation-delay: 1s; }
+        .particle:nth-child(4) { width: 30px; height: 30px; left: 80%; animation-delay: 3s; }
+        .particle:nth-child(5) { width: 50px; height: 50px; left: 50%; animation-delay: 1.5s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.3; }
+            50% { transform: translateY(-100px) rotate(180deg); opacity: 0.8; }
+        }
+
+        /* Contenedor principal */
+        .login-container {
+            position: relative;
+            z-index: 2;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* Card principal */
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            box-shadow: var(--shadow-hard);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+            width: 100%;
+            max-width: 450px;
+            animation: slideInUp 0.8s ease-out;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Header del hotel */
+        .hotel-header {
+            background: linear-gradient(135deg, var(--hotel-dark) 0%, var(--hotel-blue) 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hotel-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="stars" patternUnits="userSpaceOnUse" width="10" height="10"><circle cx="5" cy="5" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23stars)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .hotel-logo {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hotel-name {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .hotel-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .hotel-icon {
+            font-size: 3rem;
+            color: var(--hotel-gold);
+            margin-bottom: 1rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* Formulario */
+        .login-form {
+            padding: 2.5rem;
+        }
+
+        .welcome-text {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--hotel-dark);
+        }
+
+        .welcome-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome-subtitle {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        /* Campos del formulario */
+        .form-floating {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-control {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1rem 1.2rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: rgba(248, 249, 250, 0.8);
+        }
+
+        .form-control:focus {
+            border-color: var(--hotel-gold);
+            box-shadow: 0 0 0 0.25rem rgba(212, 175, 55, 0.25);
+            background: white;
+            transform: translateY(-2px);
+        }
+
+        .form-floating > label {
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        /* Botón de login */
+        .login-btn {
+            background: linear-gradient(135deg, var(--hotel-gold) 0%, #DAA520 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 1rem 2rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: white;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .login-btn:hover::before {
+            left: 100%;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.4);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Credenciales demo */
+        .demo-credentials {
+            background: linear-gradient(135deg, #e8f4f8 0%, #f0f8ff 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid var(--hotel-gold);
+            animation: fadeInUp 1s ease-out 0.5s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .demo-title {
+            font-weight: 600;
+            color: var(--hotel-blue);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .credential-item {
+            background: white;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #dee2e6;
+        }
+
+        .credential-item:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+        }
+
+        .credential-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .copy-btn {
+            background: none;
+            border: none;
+            color: var(--hotel-gold);
+            cursor: pointer;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        /* Alertas */
+        .alert {
+            border-radius: 12px;
+            border: none;
+            padding: 1rem 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-danger {
+            background: linear-gradient(135deg, #ffe8e8 0%, #ffebee 100%);
+            color: #c62828;
+            border-left: 4px solid #e53e3e;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
+            color: #2e7d32;
+            border-left: 4px solid #4caf50;
+        }
+
+        /* Footer */
+        .login-footer {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(248, 249, 250, 0.5);
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .footer-text {
+            color: #6c757d;
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hotel-name {
+                font-size: 1.8rem;
+            }
+            
+            .login-form {
+                padding: 2rem 1.5rem;
+            }
+            
+            .demo-credentials {
+                margin: 1rem 0;
+            }
+        }
+
+        /* Loading spinner */
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Partículas flotantes -->
+    <div class="floating-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <!-- Contenedor principal -->
+    <div class="login-container">
+        <div class="login-card">
+            <!-- Header del Hotel -->
+            <div class="hotel-header">
+                <div class="hotel-logo">
+                    <div class="hotel-icon">
+                        <i class="bi bi-building"></i>
+                    </div>
+                    <h1 class="hotel-name">Hotel Presidente</h1>
+                    <p class="hotel-subtitle">SISTEMA DE INVENTARIO</p>
                 </div>
-                <div class="card-body p-4">
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
+            </div>
 
-                    <form method="post" class="needs-validation" novalidate>
-                        {% csrf_token %}
-                        
-                        <div class="mb-3">
-                            <label for="username" class="form-label">
-                                <i class="fas fa-user me-1"></i>Usuario
-                            </label>
-                            <input type="text" 
-                                   class="form-control form-control-lg" 
-                                   id="username" 
-                                   name="username" 
-                                   required 
-                                   placeholder="Ingresa tu usuario">
-                            <div class="invalid-feedback">
-                                Por favor ingresa tu usuario.
-                            </div>
+            <!-- Formulario de Login -->
+            <div class="login-form">
+                <div class="welcome-text">
+                    <h2 class="welcome-title">Bienvenido</h2>
+                    <p class="welcome-subtitle">Ingresa tus credenciales para acceder al sistema</p>
+                </div>
+
+                <!-- Mensajes de Django -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            <i class="bi bi-{% if message.tags == 'error' %}exclamation-triangle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %} me-2"></i>
+                            {{ message }}
                         </div>
+                    {% endfor %}
+                {% endif %}
 
-                        <div class="mb-4">
-                            <label for="password" class="form-label">
-                                <i class="fas fa-lock me-1"></i>Contraseña
-                            </label>
-                            <input type="password" 
-                                   class="form-control form-control-lg" 
-                                   id="password" 
-                                   name="password" 
-                                   required 
-                                   placeholder="Ingresa tu contraseña">
-                            <div class="invalid-feedback">
-                                Por favor ingresa tu contraseña.
-                            </div>
+                <!-- Credenciales Demo -->
+                <div class="demo-credentials">
+                    <h6 class="demo-title">
+                        <i class="bi bi-key-fill me-2"></i>
+                        Credenciales de Demostración
+                    </h6>
+                    <div class="credential-item" onclick="fillCredentials('hotelpresidente', '1234')">
+                        <div>
+                            <strong>Usuario:</strong> hotelpresidente<br>
+                            <strong>Contraseña:</strong> 1234
                         </div>
-
-                        <div class="d-grid mb-3">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-sign-in-alt me-2"></i>
-                                Iniciar Sesión
-                            </button>
+                        <button type="button" class="copy-btn" title="Usar estas credenciales">
+                            <i class="bi bi-arrow-right-circle"></i>
+                        </button>
+                    </div>
+                    <div class="credential-item" onclick="fillCredentials('admin', 'admin123')">
+                        <div>
+                            <strong>Usuario:</strong> admin<br>
+                            <strong>Contraseña:</strong> admin123
                         </div>
-                    </form>
-
-                    <div class="text-center text-muted">
-                        <small>
-                            <i class="fas fa-info-circle me-1"></i>
-                            Acceso solo para personal autorizado
-                        </small>
+                        <button type="button" class="copy-btn" title="Usar estas credenciales">
+                            <i class="bi bi-arrow-right-circle"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="card-footer text-center bg-light">
-                    <small class="text-muted">
-                        <i class="fas fa-shield-alt me-1"></i>
-                        Sistema Seguro de Inventario Hotelero
-                    </small>
-                </div>
+
+                <!-- Formulario -->
+                <form method="post" id="loginForm">
+                    {% csrf_token %}
+                    
+                    <div class="form-floating">
+                        <input type="text" 
+                               class="form-control" 
+                               id="username" 
+                               name="username" 
+                               placeholder="Usuario"
+                               required>
+                        <label for="username">
+                            <i class="bi bi-person me-2"></i>Usuario
+                        </label>
+                    </div>
+
+                    <div class="form-floating">
+                        <input type="password" 
+                               class="form-control" 
+                               id="password" 
+                               name="password" 
+                               placeholder="Contraseña"
+                               required>
+                        <label for="password">
+                            <i class="bi bi-lock me-2"></i>Contraseña
+                        </label>
+                    </div>
+
+                    <button type="submit" class="login-btn" id="loginBtn">
+                        <div class="loading-spinner" id="loadingSpinner"></div>
+                        <i class="bi bi-box-arrow-in-right me-2" id="loginIcon"></i>
+                        <span id="loginText">Iniciar Sesión</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="login-footer">
+                <p class="footer-text">
+                    <i class="bi bi-shield-check me-1"></i>
+                    Acceso seguro y protegido &copy; 2025
+                </p>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-// Validación del formulario
-(function() {
-    'use strict';
-    window.addEventListener('load', function() {
-        var forms = document.getElementsByClassName('needs-validation');
-        var validation = Array.prototype.filter.call(forms, function(form) {
-            form.addEventListener('submit', function(event) {
-                if (form.checkValidity() === false) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }
-                form.classList.add('was-validated');
-            }, false);
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- JavaScript personalizado -->
+    <script>
+        // Función para llenar credenciales
+        function fillCredentials(username, password) {
+            document.getElementById('username').value = username;
+            document.getElementById('password').value = password;
+            
+            // Animación visual
+            const usernameField = document.getElementById('username');
+            const passwordField = document.getElementById('password');
+            
+            usernameField.focus();
+            setTimeout(() => passwordField.focus(), 100);
+            setTimeout(() => usernameField.blur(), 200);
+            setTimeout(() => passwordField.blur(), 300);
+            
+            // Efecto visual
+            [usernameField, passwordField].forEach(field => {
+                field.style.background = 'rgba(212, 175, 55, 0.1)';
+                field.style.borderColor = 'var(--hotel-gold)';
+                setTimeout(() => {
+                    field.style.background = '';
+                    field.style.borderColor = '';
+                }, 1000);
+            });
+        }
+
+        // Manejo del formulario con loading
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('loginBtn');
+            const spinner = document.getElementById('loadingSpinner');
+            const icon = document.getElementById('loginIcon');
+            const text = document.getElementById('loginText');
+            
+            // Mostrar loading
+            spinner.style.display = 'inline-block';
+            icon.style.display = 'none';
+            text.textContent = 'Verificando...';
+            submitBtn.disabled = true;
+            
+            // Si hay error, restaurar botón después de 3 segundos
+            setTimeout(() => {
+                spinner.style.display = 'none';
+                icon.style.display = 'inline';
+                text.textContent = 'Iniciar Sesión';
+                submitBtn.disabled = false;
+            }, 3000);
         });
-    }, false);
-})();
-</script>
-{% endblock %}
+
+        // Efectos de teclado
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('loginForm').submit();
+            }
+        });
+
+        // Animación de entrada de campos
+        document.addEventListener('DOMContentLoaded', function() {
+            const fields = document.querySelectorAll('.form-floating');
+            fields.forEach((field, index) => {
+                field.style.opacity = '0';
+                field.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    field.style.transition = 'all 0.6s ease';
+                    field.style.opacity = '1';
+                    field.style.transform = 'translateY(0)';
+                }, 300 + (index * 100));
+            });
+        });
+    </script>
+</body>
+</html>

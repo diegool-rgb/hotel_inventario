@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Gantt del Proyecto{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <i class="bi bi-calendar-range me-2"></i>
+    Diagrama de Gantt — Proyecto Integrado TIHI43
+  </h1>
+  <p class="page-subtitle">Inicio estimado: 2025-10-22 • Duración estimada: 4 semanas • Ajusta fechas/propietarios según tu realidad</p>
+</div>
+
+<div class="card card-professional">
+  <div class="card-body">
+    <div class="mb-3">
+      <span class="badge me-2" style="background:#2563eb">Diego Henriquez</span>
+      <span class="badge me-2" style="background:#059669">Gabriel Ruiz</span>
+      <span class="badge me-2" style="background:#7c3aed">Isaac Venegasz</span>
+      <span class="badge me-2" style="background:#dc2626">Miguel Barria</span>
+      <span class="badge me-2" style="background:#f59e0b">Simon</span>
+    </div>
+    <div class="mermaid">
+      gantt
+        title Gantt del Proyecto (API Tipo 1/2)
+        dateFormat  YYYY-MM-DD
+        axisFormat  %d/%m
+        excludes    weekends
+
+  section Actividad 1 · Metodología y Plan
+  Selección de metodología [Isaac]           :active, a1_m1, 2025-10-22, 2d
+  Cronograma e hitos [Isaac]                 :a1_m2, after a1_m1, 2d
+  Backlog + criterios de aceptación [Isaac]  :a1_m3, after a1_m2, 2d
+  Plan Sprint 1 [Miguel]                     :a1_m4, after a1_m3, 1d
+  Tablero Kanban (Trello/Jira) [Simon]       :a1_m5, after a1_m4, 1d
+
+  section Actividad 2 · Arquitectura 4+1
+  Vista lógica (clases/seq/comm) [Diego]     :a2_v1, 2025-10-29, 3d
+  Vista desarrollo (componentes/paquetes) [Diego] :a2_v2, after a2_v1, 2d
+  Vista procesos (actividades/BPMN) [Isaac]  :a2_v3, 2025-10-29, 3d
+  Vista física (topología) [Diego]           :a2_v4, after a2_v2, 1d
+  Casos de uso (escenarios) [Simon]          :a2_v5, after a2_v3, 2d
+
+  section Actividad 3 · UI/UX
+  Perfiles y funcionalidades clave [Isaac]   :a3_u1, 2025-11-04, 1d
+  Arquitectura de información [Isaac]        :a3_u2, after a3_u1, 1d
+  Mapa del sitio / navegación [Simon]        :a3_u3, after a3_u2, 1d
+  Prototipo baja fidelidad [Gabriel]         :a3_u4, after a3_u3, 2d
+  Prototipo alta fidelidad [Gabriel]         :a3_u5, after a3_u4, 3d
+
+  section Actividad 4 · Datos
+  Modelo estructurado (ERD) [Diego]          :a4_d1, 2025-11-06, 2d
+  Modelo no estructurado (doc/key-value) [Diego] :a4_d2, after a4_d1, 2d
+  Integración y sincronización [Diego]       :a4_d3, after a4_d2, 2d
+
+  section Actividad 5 · Seguridad
+  Roles y permisos [Miguel]                  :a5_s1, 2025-11-10, 1d
+  Estándares de codificación segura [Diego]  :a5_s2, after a5_s1, 2d
+  Políticas auth/errores/cifrado [Diego]     :a5_s3, after a5_s2, 2d
+
+  section Actividad 6 · Pruebas
+  Plan de pruebas [Miguel]                   :a6_p1, 2025-11-12, 1d
+  Casos funcionales e integración [Miguel]   :a6_p2, after a6_p1, 2d
+  Pruebas de seguridad (OWASP) [Miguel]      :a6_p3, after a6_p2, 1d
+  Pruebas de rendimiento [Miguel]            :a6_p4, after a6_p3, 1d
+  Pruebas de usabilidad [Simon]              :a6_p5, after a6_p4, 1d
+        Informe final y presentación [Todos]       :milestone, a6_p6, 2025-11-19, 1d
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'default' });
+</script>
+{% endblock %}

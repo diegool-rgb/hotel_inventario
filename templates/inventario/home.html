@@ -2,298 +2,322 @@
 
 {% block title %}Sistema de Inventario Hotelero{% endblock %}
 
+{% block extra_css %}
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, var(--light-bg) 0%, var(--white-bg) 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+    }
+    
+    .feature-icon {
+        width: 60px;
+        height: 60px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin: 0 auto 1rem auto;
+    }
+    
+    .login-card {
+        max-width: 400px;
+        margin: 0 auto;
+    }
+    
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<!-- Hero Section -->
+{% if not user.is_authenticated %}
+<!-- Hero Section para usuarios no logueados -->
 <div class="hero-section">
     <div class="container">
-        <div class="row align-items-center min-vh-100">
-            <div class="col-lg-6 fade-in-up">
-                <h1 class="display-3 fw-bold mb-4">
-                    Sistema de Inventario
-                    <span class="text-primary">Hotelero</span>
+        <div class="row align-items-center">
+            <div class="col-lg-7 mb-5 mb-lg-0">
+                <h1 class="display-4 fw-bold mb-4 text-primary-professional">
+                    <i class="bi bi-building me-3"></i>
+                    Sistema de Inventario Hotelero
                 </h1>
-                <p class="lead mb-4">
-                    "Nuestro sistema busca optimizar la gestión de inventario y mejorar el control de insumos, 
-                    garantizando una operación eficiente y un mejor servicio a los huéspedes."
+                <p class="lead mb-4 text-muted-professional">
+                    Moderniza la gestión de inventario de tu hotel con nuestra solución profesional. 
+                    Control total, reportes precisos y operación eficiente.
                 </p>
-                {% if not user.is_authenticated %}
-                    <div class="d-flex gap-3 mb-4">
-                        <a href="{% url 'usuarios:login' %}" class="btn btn-primary btn-lg btn-modern">
-                            <i class="bi bi-box-arrow-in-right me-2"></i>
-                            Iniciar Sesión
-                        </a>
-                        <a href="#problema-actual" class="btn btn-outline-primary btn-lg btn-modern">
-                            <i class="bi bi-info-circle me-2"></i>
-                            Conoce Más
-                        </a>
+                
+                <!-- Beneficios clave -->
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill text-success me-3" style="font-size: 1.2rem;"></i>
+                            <span>Control de stock en tiempo real</span>
+                        </div>
                     </div>
-                {% else %}
-                    <div class="d-flex gap-3 mb-4">
-                        <a href="{% url 'inventario:dashboard' %}" class="btn btn-primary btn-lg btn-modern">
-                            <i class="bi bi-speedometer2 me-2"></i>
-                            Ir al Dashboard
-                        </a>
-                        <a href="#problema-actual" class="btn btn-outline-primary btn-lg btn-modern">
-                            <i class="bi bi-info-circle me-2"></i>
-                            Conoce Más
-                        </a>
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill text-success me-3" style="font-size: 1.2rem;"></i>
+                            <span>Alertas automáticas de reabastecimiento</span>
+                        </div>
                     </div>
-                {% endif %}
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill text-success me-3" style="font-size: 1.2rem;"></i>
+                            <span>Reportes detallados y precisos</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill text-success me-3" style="font-size: 1.2rem;"></i>
+                            <span>Interfaz intuitiva y profesional</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="col-lg-6 fade-in-up">
-                <div class="hero-image text-center">
-                    <i class="bi bi-building display-1 text-primary opacity-75 mb-3"></i>
-                    <p class="text-muted">Control integral para hoteles modernos</p>
+            
+            <!-- Formulario de Login -->
+            <div class="col-lg-5">
+                <div class="card card-professional login-card">
+                    <div class="card-header card-header-professional text-center">
+                        <h4 class="mb-0">
+                            <i class="bi bi-person-circle me-2"></i>
+                            Acceso al Sistema
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        {% if form.errors %}
+                            <div class="alert alert-professional alert-danger">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label form-label-professional">Usuario:</label>
+                                <input type="text" name="username" class="form-control form-control-professional" 
+                                       placeholder="Ingresa tu usuario" required>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label form-label-professional">Contraseña:</label>
+                                <input type="password" name="password" class="form-control form-control-professional" 
+                                       placeholder="Ingresa tu contraseña" required>
+                            </div>
+                            <button type="submit" class="btn btn-professional-primary w-100 mb-3">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>
+                                Iniciar Sesión
+                            </button>
+                        </form>
+                        
+                        <div class="text-center">
+                            <small class="text-muted-professional">
+                                <i class="bi bi-shield-check me-1"></i>
+                                Acceso seguro y protegido
+                            </small>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Responsabilidades del Personal -->
-<section class="py-5 bg-light" id="personal">
+<!-- Características del Sistema -->
+<section class="py-5 bg-light-professional">
     <div class="container">
-        <div class="row mb-5">
-            <div class="col-12 text-center fade-in-up">
-                <h2 class="display-5 fw-bold mb-3">Responsabilidades del Personal</h2>
-                <p class="lead text-muted">Roles clave en la gestión interna del hotel</p>
-            </div>
+        <div class="text-center mb-5">
+            <h2 class="text-primary-professional mb-3">¿Por qué elegir nuestro sistema?</h2>
+            <p class="lead text-muted-professional">Diseñado específicamente para hoteles modernos</p>
         </div>
-        <div class="row g-4">
-            <div class="col-lg-3 col-md-6 fade-in-up">
-                <div class="card card-modern h-100 text-center">
-                    <div class="card-body">
-                        <i class="bi bi-person-badge display-4 text-primary mb-3"></i>
-                        <h5 class="fw-bold">La Administradora</h5>
-                        <p class="text-muted small">Responsable general: mantención, insumos y atención al huésped</p>
+        
+        <div class="row">
+            <div class="col-lg-4 mb-4">
+                <div class="text-center">
+                    <div class="feature-icon">
+                        <i class="bi bi-graph-up"></i>
                     </div>
+                    <h4>Control Total</h4>
+                    <p class="text-muted-professional">
+                        Monitoreo completo de inventario con alertas inteligentes y reportes automáticos.
+                    </p>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6 fade-in-up">
-                <div class="card card-modern h-100 text-center">
-                    <div class="card-body">
-                        <i class="bi bi-house-door display-4 text-success mb-3"></i>
-                        <h5 class="fw-bold">Housekeeping</h5>
-                        <p class="text-muted small">Control de amenities, frigo bar y artículos de habitación</p>
+            <div class="col-lg-4 mb-4">
+                <div class="text-center">
+                    <div class="feature-icon">
+                        <i class="bi bi-clock"></i>
                     </div>
+                    <h4>Tiempo Real</h4>
+                    <p class="text-muted-professional">
+                        Actualizaciones instantáneas de stock y movimientos para decisiones informadas.
+                    </p>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6 fade-in-up">
-                <div class="card card-modern h-100 text-center">
-                    <div class="card-body">
-                        <i class="bi bi-cup-hot display-4 text-warning mb-3"></i>
-                        <h5 class="fw-bold">Garzones (Seturna)</h5>
-                        <p class="text-muted small">Control de bodegas y área de restaurante</p>
+            <div class="col-lg-4 mb-4">
+                <div class="text-center">
+                    <div class="feature-icon">
+                        <i class="bi bi-shield-check"></i>
                     </div>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6 fade-in-up">
-                <div class="card card-modern h-100 text-center">
-                    <div class="card-body">
-                        <i class="bi bi-cookie display-4 text-info mb-3"></i>
-                        <h5 class="fw-bold">Jefa de A&B</h5>
-                        <p class="text-muted small">Control de insumos de cocina y abarrotes</p>
-                    </div>
+                    <h4>Confiable</h4>
+                    <p class="text-muted-professional">
+                        Sistema robusto con respaldos automáticos y seguridad empresarial.
+                    </p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Sistema Actual vs Nuevo -->
-<section class="py-5" id="problema-actual">
-    <div class="container">
-        <div class="row mb-5">
-            <div class="col-12 text-center fade-in-up">
-                <h2 class="display-5 fw-bold mb-3">Situación Actual</h2>
-                <div class="alert alert-warning d-inline-block">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>"El sistema actual no existe como tal; solo usamos Excel y mucha confianza."</strong>
-                </div>
-            </div>
-        </div>
-        <div class="row g-4">
-            <div class="col-lg-6 fade-in-up">
-                <div class="card card-modern h-100 border-danger">
-                    <div class="card-header bg-danger text-white">
-                        <h5 class="mb-0"><i class="bi bi-x-circle me-2"></i>Problemas Actuales</h5>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled">
-                            <li class="mb-3"><i class="bi bi-dash text-danger me-2"></i>Inventario en planillas Excel manuales</li>
-                            <li class="mb-3"><i class="bi bi-dash text-danger me-2"></i>Cada área entrega inventario por separado</li>
-                            <li class="mb-3"><i class="bi bi-dash text-danger me-2"></i>Sin alertas automáticas de stock bajo</li>
-                            <li class="mb-3"><i class="bi bi-dash text-danger me-2"></i>Errores se detectan tarde o nunca</li>
-                            <li class="mb-3"><i class="bi bi-dash text-danger me-2"></i>Pedidos de emergencia costosos</li>
-                            <li class="mb-3"><i class="bi bi-dash text-danger me-2"></i>Acceso restringido a una sola persona</li>
-                            <li class="mb-0"><i class="bi bi-dash text-danger me-2"></i>Gastos extra en combustible y tiempo</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6 fade-in-up">
-                <div class="card card-modern h-100 border-success">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="bi bi-check-circle me-2"></i>Solución Propuesta</h5>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled">
-                            <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Sistema digital centralizado</li>
-                            <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Registro automático de productos y stock</li>
-                            <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Alertas inteligentes de stock bajo</li>
-                            <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Control de entradas y salidas en tiempo real</li>
-                            <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Usuarios con niveles de acceso diferenciados</li>
-                            <li class="mb-3"><i class="bi bi-check text-success me-2"></i>Reportes automáticos y análisis</li>
-                            <li class="mb-0"><i class="bi bi-check text-success me-2"></i>Acceso desde cualquier dispositivo</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Procedimientos -->
-<section class="py-5 bg-light" id="procedimientos">
-    <div class="container">
-        <div class="row mb-5">
-            <div class="col-12 text-center fade-in-up">
-                <h2 class="display-5 fw-bold mb-3">Procedimientos Actuales</h2>
-                <p class="lead text-muted">Cómo se realiza el inventario actualmente</p>
-            </div>
-        </div>
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="timeline-steps fade-in-up">
-                    <div class="step-item">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <h5><i class="bi bi-file-earmark-excel text-success me-2"></i>Abrir hoja de Excel</h5>
-                            <p class="text-muted">Se utiliza una planilla manual para registrar inventario</p>
-                        </div>
-                    </div>
-                    <div class="step-item">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <h5><i class="bi bi-key text-warning me-2"></i>Abrir bodega con llave</h5>
-                            <p class="text-muted">Acceso físico controlado a las bodegas</p>
-                        </div>
-                    </div>
-                    <div class="step-item">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <h5><i class="bi bi-calculator text-info me-2"></i>Cuantificar productos manualmente</h5>
-                            <p class="text-muted">Conteo físico y manual de todos los insumos</p>
-                        </div>
-                    </div>
-                    <div class="step-item">
-                        <div class="step-number">4</div>
-                        <div class="step-content">
-                            <h5><i class="bi bi-upload text-primary me-2"></i>Ingresar datos al archivo general</h5>
-                            <p class="text-muted">Consolidación manual de toda la información</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Prioridades -->
-<section class="py-5" id="prioridades">
-    <div class="container">
-        <div class="row mb-5">
-            <div class="col-12 text-center fade-in-up">
-                <h2 class="display-5 fw-bold mb-3">Prioridades del Proyecto</h2>
-                <p class="lead text-muted">Fases de implementación del nuevo sistema</p>
-            </div>
-        </div>
-        <div class="row g-4">
-            <div class="col-lg-4 fade-in-up">
-                <div class="card card-modern h-100 border-primary">
-                    <div class="card-body text-center">
-                        <div class="priority-badge bg-primary text-white mb-3">Prioridad 1</div>
-                        <i class="bi bi-speedometer2 display-4 text-primary mb-3"></i>
-                        <h5 class="fw-bold">Control en Tiempo Real</h5>
-                        <p class="text-muted">Control de inventario y stock en tiempo real con alertas automáticas</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 fade-in-up">
-                <div class="card card-modern h-100 border-success">
-                    <div class="card-body text-center">
-                        <div class="priority-badge bg-success text-white mb-3">Prioridad 2</div>
-                        <i class="bi bi-truck display-4 text-success mb-3"></i>
-                        <h5 class="fw-bold">Agilizar Pedidos</h5>
-                        <p class="text-muted">Automatización y optimización de pedidos a proveedores</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 fade-in-up">
-                <div class="card card-modern h-100 border-info">
-                    <div class="card-body text-center">
-                        <div class="priority-badge bg-info text-white mb-3">Prioridad 3</div>
-                        <i class="bi bi-graph-up display-4 text-info mb-3"></i>
-                        <h5 class="fw-bold">Reportes y Análisis</h5>
-                        <p class="text-muted">Reportes automáticos y análisis de consumo y tendencias</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Seguridad -->
-<section class="py-5 bg-light" id="seguridad">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-6 fade-in-up">
-                <h2 class="display-6 fw-bold mb-4">Seguridad y Acceso</h2>
-                <p class="lead mb-4">
-                    Los sistemas del hotel son monitoreados desde España con seguridad informática 
-                    garantizada para huéspedes y trabajadores.
-                </p>
-                <p class="mb-4">
-                    El nuevo sistema se integrará a esta red segura, manteniendo los más altos 
-                    estándares de protección de datos y privacidad.
-                </p>
-                <div class="d-flex gap-3">
-                    <div class="icon-feature">
-                        <i class="bi bi-shield-check text-success me-2"></i>
-                        <span>Datos Protegidos</span>
-                    </div>
-                    <div class="icon-feature">
-                        <i class="bi bi-lock text-primary me-2"></i>
-                        <span>Acceso Controlado</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6 fade-in-up text-center">
-                <i class="bi bi-shield-shaded display-1 text-primary opacity-75"></i>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- CTA Final -->
+<!-- Estadísticas (si hay datos disponibles) -->
+{% if stats %}
 <section class="py-5">
     <div class="container">
-        <div class="row">
-            <div class="col-12 text-center fade-in-up">
-                <h2 class="display-6 fw-bold mb-4">¿Listo para modernizar tu inventario?</h2>
-                {% if not user.is_authenticated %}
-                    <a href="{% url 'admin:login' %}" class="btn btn-primary btn-lg btn-modern">
-                        <i class="bi bi-rocket-takeoff me-2"></i>
-                        Comenzar Ahora
-                    </a>
-                {% else %}
-                    <a href="{% url 'inventario:dashboard' %}" class="btn btn-primary btn-lg btn-modern">
-                        <i class="bi bi-speedometer2 me-2"></i>
-                        Ir al Dashboard
-                    </a>
-                {% endif %}
+        <div class="text-center mb-5">
+            <h2 class="text-primary-professional">Sistema en Funcionamiento</h2>
+        </div>
+        
+        <div class="row text-center">
+            <div class="col-md-3 mb-4">
+                <div class="stats-number">{{ stats.total_productos|default:"0" }}</div>
+                <p class="text-muted-professional">Productos Registrados</p>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="stats-number">{{ stats.movimientos_mes|default:"0" }}</div>
+                <p class="text-muted-professional">Movimientos Este Mes</p>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="stats-number">5</div>
+                <p class="text-muted-professional">Categorías</p>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="stats-number">99.9%</div>
+                <p class="text-muted-professional">Disponibilidad</p>
             </div>
         </div>
     </div>
 </section>
+{% endif %}
+
+{% else %}
+<!-- Dashboard para usuarios logueados -->
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="bi bi-house me-2"></i>
+        Bienvenido, {{ user.get_full_name|default:user.username }}
+    </h1>
+    <p class="page-subtitle">
+        {% now "l, d \d\e F \d\e Y" %} • Sistema de Inventario Hotelero
+    </p>
+</div>
+
+<!-- Acceso Rápido -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card card-professional h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-speedometer2 text-primary-professional mb-3" style="font-size: 2.5rem;"></i>
+                <h5>Dashboard</h5>
+                <p class="text-muted-professional mb-3">Ver estadísticas y resumen general</p>
+                <a href="{% url 'inventario:dashboard' %}" class="btn btn-professional-primary">
+                    Ir al Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card card-professional h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-box-seam text-primary-professional mb-3" style="font-size: 2.5rem;"></i>
+                <h5>Productos</h5>
+                <p class="text-muted-professional mb-3">Gestionar inventario de productos</p>
+                <a href="{% url 'inventario:productos' %}" class="btn btn-professional-primary">
+                    Ver Productos
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card card-professional h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-receipt text-primary-professional mb-3" style="font-size: 2.5rem;"></i>
+                <h5>Ingresar Factura</h5>
+                <p class="text-muted-professional mb-3">Registrar compras con varios productos</p>
+                <a href="{% url 'inventario:ingresar_factura' %}" class="btn btn-professional-primary">
+                    Nueva Factura
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card card-professional h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-exclamation-triangle text-warning mb-3" style="font-size: 2.5rem;"></i>
+                <h5>Alertas</h5>
+                <p class="text-muted-professional mb-3">Productos con stock bajo</p>
+                <a href="{% url 'inventario:alertas' %}" class="btn btn-professional-secondary">
+                    Ver Alertas
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Información del Sistema -->
+<div class="card card-professional">
+    <div class="card-header card-header-professional">
+        <h5 class="mb-0">
+            <i class="bi bi-info-circle me-2"></i>
+            Información del Sistema
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6 class="text-primary-professional">Funciones Principales:</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Gestión completa de productos e inventario
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Control de entradas y salidas de stock
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Alertas automáticas de reabastecimiento
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Reportes detallados y estadísticas
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-primary-professional">Soporte y Ayuda:</h6>
+                <p class="text-muted-professional">
+                    ¿Necesitas ayuda para usar el sistema? Consulta nuestra guía completa.
+                </p>
+                <a href="{% url 'inventario:ayuda' %}" class="btn btn-professional-secondary">
+                    <i class="bi bi-question-circle me-2"></i>
+                    Ver Guía de Usuario
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
