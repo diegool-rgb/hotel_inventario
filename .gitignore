@@ -1,3 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+
+# Virtual environments
+venv/
+.venv/
+
+# Django collectstatic output
+staticfiles/
+
+# User uploads and runtime logs
+media/
+logs/
+*.log
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
 # Archivos a ignorar en Git
 
 # Entornos virtuales
