@@ -168,7 +168,11 @@
                             <label for="{{ form.area_inicial.id_for_label }}" class="form-label fw-bold">
                                 <i class="bi bi-geo-alt me-1"></i>Área donde se guardará
                             </label>
-                            {{ form.area_inicial }}
+                            <div class="d-flex align-items-center">
+                                {{ form.area_inicial }}
+                                <button type="button" class="btn btn-outline-secondary btn-sm ms-2" title="Gestionar áreas"
+                                        onclick="openManageModal('area')">Gestionar</button>
+                            </div>
                             {% if form.area_inicial.errors %}
                                 <div class="text-danger small mt-1">
                                     {{ form.area_inicial.errors.0 }}
@@ -194,7 +198,11 @@
                             <label for="{{ form.proveedor.id_for_label }}" class="form-label fw-bold">
                                 <i class="bi bi-building me-1"></i>Proveedor
                             </label>
-                            {{ form.proveedor }}
+                            <div class="d-flex align-items-center">
+                                {{ form.proveedor }}
+                                <button type="button" class="btn btn-outline-secondary btn-sm ms-2" title="Gestionar proveedores"
+                                        onclick="openManageModal('proveedor')">Gestionar</button>
+                            </div>
                         </div>
                     </div>
 
@@ -302,5 +310,222 @@ document.getElementById('{{ form.comprobante.id_for_label }}').addEventListener(
         document.getElementById('imagePreview').style.display = 'none';
     }
 });
+</script>
+
+<!-- Modal para gestionar Proveedores / Áreas (front-end CRUD) -->
+<div class="modal fade" id="manageEntitiesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-tools me-2"></i>Gestionar elementos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs mb-3" id="manageTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-proveedor" data-bs-toggle="tab" data-bs-target="#tabProveedorPane" type="button" role="tab">Proveedores</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-area" data-bs-toggle="tab" data-bs-target="#tabAreaPane" type="button" role="tab">Áreas</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tabProveedorPane" role="tabpanel">
+                        <div id="proveedorList" class="list-group mb-3"></div>
+                        <div class="row g-2">
+                            <div class="col-md-7">
+                                <input id="newProveedorName" type="text" class="form-control" placeholder="Nuevo proveedor (nombre)">
+                            </div>
+                            <div class="col-md-3">
+                                <input id="newProveedorRut" type="text" class="form-control" placeholder="RUT (opcional)">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" type="button" onclick="addEntity('proveedor')">Agregar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabAreaPane" role="tabpanel">
+                        <div id="areaList" class="list-group mb-3"></div>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input id="newAreaName" type="text" class="form-control" placeholder="Nueva área (nombre)">
+                            </div>
+                            <div class="col-md-4">
+                                <select id="newAreaTipo" class="form-select">
+                                    {% for val,label in area_tipos %}
+                                    <option value="{{ val }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" type="button" onclick="addEntity('area')">Agregar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// IDs de selects actuales (renderizados por Django forms)
+const proveedorSelectId = '{{ form.proveedor.id_for_label }}';
+const areaSelectId = '{{ form.area_inicial.id_for_label }}';
+
+function openManageModal(type) {
+    // Seleccionar tab correspondiente
+    const tabTrigger = new bootstrap.Tab(document.querySelector(type === 'proveedor' ? '#tab-proveedor' : '#tab-area'));
+    tabTrigger.show();
+
+    // Sincronizar selects con backend antes de mostrar modal
+    fetch('/inventario/api/entities/')
+        .then(r => r.json())
+        .then(data => {
+            if (data && data.success) {
+                const provSelect = document.getElementById(proveedorSelectId);
+                const areaSelect = document.getElementById(areaSelectId);
+                if (provSelect) {
+                    provSelect.innerHTML = '';
+                    data.proveedores.forEach(p => {
+                        const o = document.createElement('option'); o.value = p.id; o.text = p.nombre; provSelect.appendChild(o);
+                    });
+                }
+                if (areaSelect) {
+                    areaSelect.innerHTML = '';
+                    data.areas.forEach(a => {
+                        const o = document.createElement('option'); o.value = a.id; o.text = a.nombre; areaSelect.appendChild(o);
+                    });
+                }
+            }
+        })
+        .catch(err => console.warn('No se pudo sincronizar entidades:', err))
+        .finally(() => {
+            populateList(type);
+            const modalEl = document.getElementById('manageEntitiesModal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        });
+}
+
+function populateList(type) {
+    const listEl = (type === 'proveedor') ? document.getElementById('proveedorList') : document.getElementById('areaList');
+    listEl.innerHTML = '';
+    const selectEl = document.getElementById(type === 'proveedor' ? proveedorSelectId : areaSelectId);
+    if (!selectEl) return;
+    Array.from(selectEl.options).forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item d-flex justify-content-between align-items-center';
+        item.innerHTML = `<div>${opt.text}</div>`;
+        const btnGroup = document.createElement('div');
+        const useBtn = document.createElement('button');
+        useBtn.type = 'button';
+        useBtn.className = 'btn btn-sm btn-outline-success me-2';
+        useBtn.textContent = 'Usar';
+        useBtn.onclick = () => { selectEl.value = opt.value; selectEl.dispatchEvent(new Event('change')); };
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn btn-sm btn-outline-danger';
+        delBtn.textContent = 'Eliminar';
+        delBtn.onclick = () => { if (confirm('Eliminar elemento seleccionado? Esta acción sólo modifica la vista actual.')) removeEntity(type, opt.value); };
+        btnGroup.appendChild(useBtn);
+        btnGroup.appendChild(delBtn);
+        item.appendChild(btnGroup);
+        listEl.appendChild(item);
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+async function addEntity(type) {
+    const inputId = type === 'proveedor' ? 'newProveedorName' : 'newAreaName';
+    const name = document.getElementById(inputId).value.trim();
+    if (!name) return alert('Ingresa un nombre válido');
+    const url = '/inventario/api/entities/create/';
+    const csrftoken = getCookie('csrftoken');
+    try {
+        const payload = {type: type, name: name};
+        if (type === 'proveedor') {
+            payload.rut = document.getElementById('newProveedorRut').value.trim();
+        } else if (type === 'area') {
+            payload.tipo = document.getElementById('newAreaTipo').value;
+        }
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Error al crear');
+        const selectEl = document.getElementById(type === 'proveedor' ? proveedorSelectId : areaSelectId);
+        if (!selectEl) return alert('No se encontró el elemento select correspondiente');
+        const opt = document.createElement('option');
+        opt.value = data.id;
+        opt.text = data.nombre;
+        opt.selected = true;
+        selectEl.appendChild(opt);
+        document.getElementById(inputId).value = '';
+        if (type === 'proveedor') document.getElementById('newProveedorRut').value = '';
+        populateList(type);
+    } catch (err) {
+        console.error(err);
+        alert('No se pudo crear el elemento: ' + err.message);
+    }
+}
+
+async function removeEntity(type, value) {
+    // If the option is temporary (tmp_) remove locally
+    if (String(value).startsWith('tmp_')) {
+        const selectElLocal = document.getElementById(type === 'proveedor' ? proveedorSelectId : areaSelectId);
+        const optLocal = Array.from(selectElLocal.options).find(o => o.value == value);
+        if (optLocal) optLocal.remove();
+        populateList(type);
+        return;
+    }
+
+    if (!confirm('Eliminar elemento seleccionado? Esta acción lo desactivará en el sistema.')) return;
+    const url = '/inventario/api/entities/delete/';
+    const csrftoken = getCookie('csrftoken');
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({type: type, id: value})
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Error al eliminar');
+        const selectEl = document.getElementById(type === 'proveedor' ? proveedorSelectId : areaSelectId);
+        const opt = Array.from(selectEl.options).find(o => o.value == value);
+        if (opt) opt.remove();
+        populateList(type);
+    } catch (err) {
+        console.error(err);
+        alert('No se pudo eliminar el elemento: ' + err.message);
+    }
+}
 </script>
 {% endblock %}

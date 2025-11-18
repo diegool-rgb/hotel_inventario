@@ -37,4 +37,7 @@ urlpatterns = [
     
     # APIs
     path('api/stats/', views.api_stats, name='api_stats'),
+    path('api/entities/', views.api_entities, name='api_entities'),
+    path('api/entities/create/', views.api_create_entity, name='api_create_entity'),
+    path('api/entities/delete/', views.api_delete_entity, name='api_delete_entity'),
 ]

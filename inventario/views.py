@@ -10,6 +10,8 @@ from decimal import Decimal
 from datetime import date
 from .models import Producto, Stock, Movimiento, AlertaStock, Area, Categoria, Proveedor, EntradaStock, DetalleEntradaStock
 from .forms import AgregarProductoForm, EntradaStockForm, DetalleEntradaFormSet, ProveedorForm
+import json
+import time
 
 
 def home(request):
@@ -367,6 +369,7 @@ def agregar_producto(request):
         'categorias': Categoria.objects.filter(activo=True),
         'areas': Area.objects.filter(activo=True),
         'proveedores': Proveedor.objects.filter(activo=True),
+        'area_tipos': Area.TIPOS_AREA,
     }
     return render(request, 'inventario/agregar_producto.html', context)
 
@@ -1024,3 +1027,72 @@ def agregar_stock_ajax(request):
         'success': False,
         'error': 'Método no permitido'
     })
+
+
+@login_required
+def api_entities(request):
+    """Devuelve listas de proveedores y áreas (para poblar selects)"""
+    proveedores = list(Proveedor.objects.filter(activo=True).values('id', 'nombre'))
+    areas = list(Area.objects.filter(activo=True).values('id', 'nombre'))
+    return JsonResponse({'success': True, 'proveedores': proveedores, 'areas': areas})
+
+
+@login_required
+def api_create_entity(request):
+    """Crea un proveedor o un área vía AJAX (espera JSON: {type:'proveedor'|'area', name: '...'})."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    try:
+        data = json.loads(request.body)
+        typ = data.get('type')
+        name = data.get('name', '').strip()
+        if not name:
+            return JsonResponse({'success': False, 'error': 'Nombre requerido'}, status=400)
+
+        if typ == 'proveedor':
+            # Proveedor requiere rut único; generar uno automático si no se proporciona
+            rut = data.get('rut') or f'AUTO-{int(time.time())}'
+            prov = Proveedor.objects.create(nombre=name, rut=rut, activo=True)
+            return JsonResponse({'success': True, 'id': prov.id, 'nombre': prov.nombre, 'type': 'proveedor'})
+
+        elif typ == 'area':
+            tipo = data.get('tipo') or 'BODEGA'
+            area = Area.objects.create(nombre=name, tipo=tipo, activo=True)
+            return JsonResponse({'success': True, 'id': area.id, 'nombre': area.nombre, 'type': 'area'})
+
+        else:
+            return JsonResponse({'success': False, 'error': 'Tipo inválido'}, status=400)
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def api_delete_entity(request):
+    """Marca como inactivo un proveedor o área (espera JSON: {type, id})."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    try:
+        data = json.loads(request.body)
+        typ = data.get('type')
+        obj_id = data.get('id')
+        if not obj_id:
+            return JsonResponse({'success': False, 'error': 'ID requerido'}, status=400)
+
+        if typ == 'proveedor':
+            prov = get_object_or_404(Proveedor, id=obj_id)
+            prov.activo = False
+            prov.save()
+            return JsonResponse({'success': True})
+
+        elif typ == 'area':
+            area = get_object_or_404(Area, id=obj_id)
+            area.activo = False
+            area.save()
+            return JsonResponse({'success': True})
+
+        else:
+            return JsonResponse({'success': False, 'error': 'Tipo inválido'}, status=400)
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
