@@ -384,8 +384,19 @@ function openManageModal(type) {
     tabTrigger.show();
 
     // Sincronizar selects con backend antes de mostrar modal
-    fetch('/inventario/api/entities/')
-        .then(r => r.json())
+    fetch('{% url 'inventario:api_entities' %}')
+        .then(async (r) => {
+            const ct = r.headers.get('content-type') || '';
+            if (!r.ok) {
+                const txt = await r.text();
+                throw new Error(`HTTP ${r.status}: ${txt}`);
+            }
+            if (!ct.includes('application/json')) {
+                const txt = await r.text();
+                throw new Error('Respuesta no JSON al pedir entidades: ' + txt);
+            }
+            return r.json();
+        })
         .then(data => {
             if (data && data.success) {
                 const provSelect = document.getElementById(proveedorSelectId);
@@ -459,7 +470,7 @@ async function addEntity(type) {
     const inputId = type === 'proveedor' ? 'newProveedorName' : 'newAreaName';
     const name = document.getElementById(inputId).value.trim();
     if (!name) return alert('Ingresa un nombre válido');
-    const url = '/inventario/api/entities/create/';
+    const url = '{% url 'inventario:api_create_entity' %}';
     const csrftoken = getCookie('csrftoken');
     try {
         const payload = {type: type, name: name};
@@ -476,6 +487,17 @@ async function addEntity(type) {
             },
             body: JSON.stringify(payload)
         });
+
+        // Verificar que la respuesta sea JSON y exitosa
+        const contentType = res.headers.get('content-type') || '';
+        if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(`HTTP ${res.status}: ${txt}`);
+        }
+        if (!contentType.includes('application/json')) {
+            const txt = await res.text();
+            throw new Error('Respuesta no JSON al crear entidad: ' + txt);
+        }
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Error al crear');
         const selectEl = document.getElementById(type === 'proveedor' ? proveedorSelectId : areaSelectId);
@@ -505,7 +527,7 @@ async function removeEntity(type, value) {
     }
 
     if (!confirm('Eliminar elemento seleccionado? Esta acción lo desactivará en el sistema.')) return;
-    const url = '/inventario/api/entities/delete/';
+    const url = '{% url 'inventario:api_delete_entity' %}';
     const csrftoken = getCookie('csrftoken');
     try {
         const res = await fetch(url, {
@@ -516,6 +538,16 @@ async function removeEntity(type, value) {
             },
             body: JSON.stringify({type: type, id: value})
         });
+
+        const contentType = res.headers.get('content-type') || '';
+        if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(`HTTP ${res.status}: ${txt}`);
+        }
+        if (!contentType.includes('application/json')) {
+            const txt = await res.text();
+            throw new Error('Respuesta no JSON al eliminar entidad: ' + txt);
+        }
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Error al eliminar');
         const selectEl = document.getElementById(type === 'proveedor' ? proveedorSelectId : areaSelectId);

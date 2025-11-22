@@ -22,6 +22,27 @@
                 <i class="bi bi-receipt me-2"></i>
                 Ingresar factura
             </a>
+            <div class="dropdown">
+                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-file-earmark-spreadsheet me-2"></i>
+                    Exportar productos con stock
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'inventario:reporte_productos_stock' %}?formato=csv">
+                        <i class="bi bi-filetype-csv me-2"></i>CSV
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'inventario:reporte_productos_stock' %}?formato=pdf">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>PDF
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'inventario:reporte_productos_stock' %}?formato=excel">
+                        <i class="bi bi-file-earmark-excel me-2"></i>Excel
+                    </a></li>
+                </ul>
+            </div>
+            <a href="{% url 'inventario:salida_stock' %}" class="btn btn-outline-danger">
+                <i class="bi bi-box-arrow-up-right me-2"></i>
+                Salida de stock
+            </a>
             <a href="{% url 'inventario:ayuda' %}" class="btn btn-outline-info">
                 <i class="bi bi-question-circle me-2"></i>
                 Guía de uso

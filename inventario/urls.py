@@ -40,4 +40,6 @@ urlpatterns = [
     path('api/entities/', views.api_entities, name='api_entities'),
     path('api/entities/create/', views.api_create_entity, name='api_create_entity'),
     path('api/entities/delete/', views.api_delete_entity, name='api_delete_entity'),
+    path('salida-stock/', views.salida_stock, name='salida_stock'),
+    path('reporte/productos-stock/', views.reporte_productos_stock, name='reporte_productos_stock'),
 ]

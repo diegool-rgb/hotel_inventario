@@ -30,6 +30,23 @@
         </div>
     </div>
 
+                                };
+                            }
+                        });
+                    }
+
+                    // Auto-seleccionar producto si se pasó ?producto=ID en la URL
+                    {% if producto_seleccionada %}
+                    try {
+                        const el = document.querySelector(`[data-producto-id="{{ producto_seleccionada }}"]`);
+                        if (el) {
+                            // Llamar a la función de selección para mostrar el formulario
+                            seleccionarProducto(el);
+                        }
+                    } catch (e) {
+                        console.warn('No se pudo auto-seleccionar producto:', e);
+                    }
+                    {% endif %}
     <!-- Explicación rápida -->
     <div class="row mb-4">
         <div class="col-12">

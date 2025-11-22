@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db.models import Sum, Count, Q
 from django.http import JsonResponse
 from django.contrib import messages
@@ -12,6 +13,8 @@ from .models import Producto, Stock, Movimiento, AlertaStock, Area, Categoria, P
 from .forms import AgregarProductoForm, EntradaStockForm, DetalleEntradaFormSet, ProveedorForm
 import json
 import time
+from django.http import HttpResponse
+import csv
 
 
 def home(request):
@@ -292,6 +295,7 @@ def api_stats(request):
     })
 
 
+@ensure_csrf_cookie
 @login_required
 def agregar_producto(request):
     """Vista para agregar un nuevo producto con stock inicial"""
@@ -465,6 +469,7 @@ def agregar_proveedor(request):
 
 
 @login_required
+@ensure_csrf_cookie
 def ingresar_factura(request):
     """Registrar una factura/boleta con uno o más productos (detalle múltiple)."""
     from datetime import date, datetime
@@ -612,6 +617,7 @@ def trazabilidad(request):
 
 
 @login_required
+@ensure_csrf_cookie
 def entrada_stock(request):
     """Vista mejorada para registrar nueva entrada de stock con búsqueda de productos"""
     from datetime import date
@@ -620,6 +626,7 @@ def entrada_stock(request):
     busqueda = request.GET.get('q', '').strip()
     categoria_id = request.GET.get('categoria', '')
     area_id = request.GET.get('area', '')
+    producto_param = request.GET.get('producto')
     
     # Generar próximo número de entrada automáticamente
     ultima_entrada_num = EntradaStock.objects.all().order_by('-id').first()
@@ -658,6 +665,16 @@ def entrada_stock(request):
     # Filtrar por área (productos que tengan stock en esa área)
     if area_id:
         productos_query = productos_query.filter(stocks__area_id=area_id).distinct()
+
+    # Si viene un parámetro de producto específico, filtrar por ese id
+    producto_seleccionada = None
+    if producto_param:
+        try:
+            pid = int(producto_param)
+            productos_query = productos_query.filter(id=pid)
+            producto_seleccionada = pid
+        except ValueError:
+            pass
     
     # Obtener áreas con stock para cada producto y datos inteligentes
     productos = []
@@ -783,11 +800,324 @@ def entrada_stock(request):
         'proveedores': Proveedor.objects.filter(activo=True),
         'fecha_hoy': date.today().isoformat(),
         'proximo_numero_entrada': proximo_numero,
+        'producto_seleccionada': producto_seleccionada,
     }
     return render(request, 'inventario/entrada_stock.html', context)
 
 
 @login_required
+def reporte_productos_stock(request):
+    """Genera un reporte de productos con stock en formato CSV o PDF."""
+    from django.db.models import Sum
+    import openpyxl
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.units import inch
+    from io import BytesIO
+
+    formato = request.GET.get('formato', 'csv').lower()
+
+    productos = Producto.objects.filter(activo=True).annotate(stock_total=Sum('stocks__cantidad')).filter(stock_total__gt=0)
+
+    if formato == 'pdf':
+        # Generar PDF con formato optimizado para legibilidad
+        from reportlab.lib.pagesizes import letter, A4, landscape
+        from reportlab.platypus import PageBreak, LongTable
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+
+        buffer = BytesIO()
+        # Usar landscape para mejor ajuste
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
+        elements = []
+
+        styles = getSampleStyleSheet()
+
+        # Título con mejor formato
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Title'],
+            fontSize=16,
+            spaceAfter=20,
+            alignment=TA_CENTER
+        )
+        title = Paragraph("Reporte de Productos con Stock", title_style)
+        elements.append(title)
+
+        # Información del reporte
+        info_style = ParagraphStyle(
+            'InfoStyle',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor=colors.grey,
+            alignment=TA_CENTER,
+            spaceAfter=20
+        )
+        info_text = f"Total de productos: {productos.count()} | Generado el {date.today().strftime('%d/%m/%Y')}"
+        elements.append(Paragraph(info_text, info_style))
+
+        # Datos para la tabla optimizada
+        data = [['ID', 'Código', 'Nombre del Producto', 'Categoría', 'Unidad', 'Stock', 'Precio', 'Áreas']]
+
+        for p in productos:
+            areas = Stock.objects.filter(producto=p, cantidad__gt=0).select_related('area')
+            areas_info = ', '.join([f"{a.area.nombre}({a.cantidad})" for a in areas])
+
+            # Limitar longitudes para mejor ajuste
+            nombre_corto = p.nombre[:25] + '...' if len(p.nombre) > 25 else p.nombre
+            categoria_corta = (p.categoria.nombre if p.categoria else 'Sin cat.')[:15] + '...' if p.categoria and len(p.categoria.nombre) > 15 else (p.categoria.nombre if p.categoria else 'Sin cat.')
+            areas_corto = areas_info[:35] + '...' if len(areas_info) > 35 else areas_info
+
+            data.append([
+                str(p.id),
+                p.codigo or '-',
+                nombre_corto,
+                categoria_corta,
+                p.get_unidad_medida_display() if hasattr(p, 'get_unidad_medida_display') else str(p.unidad_medida or '-'),
+                str(p.stock_total or 0),
+                f"${p.precio_unitario:.2f}" if p.precio_unitario else '-',
+                areas_corto
+            ])
+
+        # Anchos de columna optimizados para landscape
+        col_widths = [25, 50, 120, 70, 45, 40, 55, 120]  # Más compacto
+
+        # Usar LongTable para múltiples páginas si es necesario
+        table = LongTable(data, colWidths=col_widths, repeatRows=1)
+
+        # Estilos optimizados para mejor legibilidad
+        table.setStyle(TableStyle([
+            # Encabezado
+            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+            ('TOPPADDING', (0, 0), (-1, 0), 6),
+
+            # Cuerpo de la tabla
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 3),
+            ('TOPPADDING', (0, 1), (-1, -1), 3),
+
+            # Alineación específica por columna
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),  # ID centrado
+            ('ALIGN', (1, 0), (1, -1), 'CENTER'),  # Código centrado
+            ('ALIGN', (4, 0), (4, -1), 'CENTER'),  # Unidad centrada
+            ('ALIGN', (5, 0), (5, -1), 'CENTER'),  # Stock centrado
+            ('ALIGN', (6, 0), (6, -1), 'RIGHT'),   # Precio alineado a la derecha
+
+            # Bordes sutiles
+            ('GRID', (0, 0), (-1, -1), 0.3, colors.black),
+            ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+
+            # Filas alternas para mejor legibilidad (más sutil)
+            ('BACKGROUND', (0, 2), (-1, 2), colors.lightgrey),
+            ('BACKGROUND', (0, 4), (-1, 4), colors.lightgrey),
+            ('BACKGROUND', (0, 6), (-1, 6), colors.lightgrey),
+            ('BACKGROUND', (0, 8), (-1, 8), colors.lightgrey),
+        ]))
+
+        elements.append(table)
+
+        doc.build(elements)
+
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="productos_con_stock.pdf"'
+        return response
+
+    elif formato == 'excel':
+        # Generar Excel
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Productos con Stock"
+
+        # Encabezados
+        headers = ['ID', 'Código', 'Nombre', 'Categoría', 'Unidad', 'Stock Total', 'Precio Unitario', 'Áreas (nombre:cantidad)']
+        for col_num, header in enumerate(headers, 1):
+            ws.cell(row=1, column=col_num, value=header)
+
+        # Datos
+        for row_num, p in enumerate(productos, 2):
+            areas = Stock.objects.filter(producto=p, cantidad__gt=0).select_related('area')
+            areas_info = '; '.join([f"{a.area.nombre}:{a.cantidad}" for a in areas])
+
+            ws.cell(row=row_num, column=1, value=p.id)
+            ws.cell(row=row_num, column=2, value=p.codigo)
+            ws.cell(row=row_num, column=3, value=p.nombre)
+            ws.cell(row=row_num, column=4, value=p.categoria.nombre if p.categoria else '')
+            ws.cell(row=row_num, column=5, value=p.get_unidad_medida_display() if hasattr(p, 'get_unidad_medida_display') else p.unidad_medida)
+            ws.cell(row=row_num, column=6, value=p.stock_total or 0)
+            ws.cell(row=row_num, column=7, value=str(p.precio_unitario or ''))
+            ws.cell(row=row_num, column=8, value=areas_info)
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+
+        response = HttpResponse(buffer.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="productos_con_stock.xlsx"'
+        return response
+
+    else:
+        # Generar CSV (por defecto)
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="productos_con_stock.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(['ID', 'Código', 'Nombre', 'Categoría', 'Unidad', 'Stock Total', 'Precio Unitario', 'Áreas (nombre:cantidad)'])
+
+        for p in productos:
+            areas = Stock.objects.filter(producto=p, cantidad__gt=0).select_related('area')
+            areas_info = '; '.join([f"{a.area.nombre}:{a.cantidad}" for a in areas])
+            writer.writerow([
+                p.id,
+                p.codigo,
+                p.nombre,
+                p.categoria.nombre if p.categoria else '',
+                p.get_unidad_medida_display() if hasattr(p, 'get_unidad_medida_display') else p.unidad_medida,
+                str(p.stock_total or 0),
+                str(p.precio_unitario or ''),
+                areas_info
+            ])
+
+        return response
+
+
+@login_required
+@ensure_csrf_cookie
+def salida_stock(request):
+    """Registrar una salida de stock (consumo/uso) con búsqueda y filtros avanzados."""
+    from datetime import date
+    from decimal import Decimal
+
+    # Obtener parámetros de búsqueda y filtros
+    busqueda = request.GET.get('q', '').strip()
+    categoria_id = request.GET.get('categoria', '')
+    area_id = request.GET.get('area', '')
+    producto_param = request.GET.get('producto')
+
+    # Construir queryset con filtros y solo productos con stock
+    productos_query = Producto.objects.filter(activo=True).select_related('categoria')
+
+    # Anotar con stock total y filtrar solo productos con stock > 0
+    productos_query = productos_query.annotate(
+        stock_total=Sum('stocks__cantidad')
+    ).filter(stock_total__gt=0)
+
+    # Filtrar por búsqueda
+    if busqueda:
+        productos_query = productos_query.filter(
+            Q(nombre__icontains=busqueda) |
+            Q(codigo__icontains=busqueda) |
+            Q(descripcion__icontains=busqueda)
+        )
+
+    # Filtrar por categoría
+    if categoria_id:
+        productos_query = productos_query.filter(categoria_id=categoria_id)
+
+    # Filtrar por área (productos que tengan stock en esa área)
+    if area_id:
+        productos_query = productos_query.filter(stocks__area_id=area_id).distinct()
+
+    # Si viene un parámetro de producto específico, filtrar por ese id
+    producto_seleccionada = None
+    if producto_param:
+        try:
+            pid = int(producto_param)
+            productos_query = productos_query.filter(id=pid)
+            producto_seleccionada = pid
+        except ValueError:
+            pass
+
+    # Obtener áreas con stock para cada producto
+    productos = []
+    for producto in productos_query[:50]:  # Limitar a 50 para mejor rendimiento
+        areas_con_stock = Stock.objects.filter(
+            producto=producto,
+            cantidad__gt=0
+        ).select_related('area').order_by('area__nombre')
+
+        producto.areas_con_stock = areas_con_stock
+        productos.append(producto)
+
+    if request.method == 'POST':
+        producto_id = request.POST.get('producto')
+        area_id = request.POST.get('area')
+        cantidad = request.POST.get('cantidad')
+        motivo = request.POST.get('motivo') or 'CONSUMO'
+
+        if not producto_id or not area_id or not cantidad:
+            messages.error(request, 'Completa los campos obligatorios.')
+            return redirect('inventario:salida_stock')
+
+        try:
+            producto = Producto.objects.get(id=producto_id)
+            area = Area.objects.get(id=area_id)
+            cantidad_dec = Decimal(str(cantidad))
+            if cantidad_dec <= 0:
+                messages.error(request, 'Cantidad debe ser mayor a 0.')
+                return redirect('inventario:salida_stock')
+
+            stock = Stock.objects.filter(producto=producto, area=area).first()
+            if not stock or stock.cantidad < cantidad_dec:
+                messages.error(request, 'No hay suficiente stock en el área seleccionada.')
+                return redirect('inventario:salida_stock')
+
+            with transaction.atomic():
+                stock.cantidad -= cantidad_dec
+                stock.save()
+
+                Movimiento.objects.create(
+                    producto=producto,
+                    area_origen=area,
+                    area_destino=None,
+                    tipo='SALIDA',
+                    motivo=motivo,
+                    cantidad=cantidad_dec,
+                    precio_unitario=None,
+                    usuario=request.user,
+                    observaciones=f'Salida por {motivo}'
+                )
+
+            messages.success(request, f'Salida registrada: -{cantidad_dec} {producto.unidad_medida} de {producto.nombre} en {area.nombre}.')
+            return redirect('inventario:detalle_producto', producto_id=producto.id)
+
+        except Producto.DoesNotExist:
+            messages.error(request, 'Producto no encontrado.')
+            return redirect('inventario:salida_stock')
+        except Area.DoesNotExist:
+            messages.error(request, 'Área no encontrada.')
+            return redirect('inventario:salida_stock')
+        except Exception as e:
+            messages.error(request, f'Error interno: {str(e)}')
+            return redirect('inventario:salida_stock')
+
+    # GET: mostrar formulario con búsqueda y filtros
+    context = {
+        'productos': productos,
+        'total_productos': len(productos),
+        'busqueda': busqueda,
+        'categoria_seleccionada': int(categoria_id) if categoria_id else None,
+        'area_seleccionada': int(area_id) if area_id else None,
+        'categorias': Categoria.objects.filter(activo=True),
+        'areas': Area.objects.filter(activo=True),
+        'producto_seleccionada': producto_seleccionada,
+    }
+    return render(request, 'inventario/salida_stock.html', context)
+
+
+@login_required
+@ensure_csrf_cookie
 def entrada_stock_simple(request):
     """Vista simplificada para entrada de stock con interfaz de cards"""
     from datetime import date
@@ -1029,17 +1359,27 @@ def agregar_stock_ajax(request):
     })
 
 
-@login_required
 def api_entities(request):
-    """Devuelve listas de proveedores y áreas (para poblar selects)"""
+    """Devuelve listas de proveedores y áreas (para poblar selects).
+
+    Si no está autenticado, devuelve JSON con error 401 (evita redirección HTML).
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
     proveedores = list(Proveedor.objects.filter(activo=True).values('id', 'nombre'))
     areas = list(Area.objects.filter(activo=True).values('id', 'nombre'))
     return JsonResponse({'success': True, 'proveedores': proveedores, 'areas': areas})
 
 
-@login_required
 def api_create_entity(request):
-    """Crea un proveedor o un área vía AJAX (espera JSON: {type:'proveedor'|'area', name: '...'})."""
+    """Crea un proveedor o un área vía AJAX (espera JSON: {type:'proveedor'|'area', name: '...'}).
+
+    Si el usuario no está autenticado devuelve JSON 401 en lugar de redirigir.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
     try:
@@ -1067,9 +1407,14 @@ def api_create_entity(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@login_required
 def api_delete_entity(request):
-    """Marca como inactivo un proveedor o área (espera JSON: {type, id})."""
+    """Marca como inactivo un proveedor o área (espera JSON: {type, id}).
+
+    Devuelve JSON 401 si no está autenticado para evitar redirecciones HTML.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'No autenticado'}, status=401)
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
     try:
