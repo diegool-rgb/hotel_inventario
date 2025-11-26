@@ -1,0 +1,310 @@
+{% comment %}
+Reusable modal for managing proveedores and áreas.
+Parameters:
+- modal_id: unique modal id (default: manageEntitiesModal)
+- proveedor_select_id: DOM id of the proveedor <select>
+- area_select_id: DOM id of the área <select> (optional)
+- show_area_tab: boolean to display the Áreas tab
+- area_tipos: iterable with area type choices (required when show_area_tab)
+{% endcomment %}
+{% with modal_id=modal_id|default:'manageEntitiesModal' %}
+{% with proveedor_list_id=modal_id|add:'-proveedorList' area_list_id=modal_id|add:'-areaList' %}
+{% with proveedor_name_id=modal_id|add:'-newProveedorName' proveedor_rut_id=modal_id|add:'-newProveedorRut' area_name_id=modal_id|add:'-newAreaName' area_tipo_id=modal_id|add:'-newAreaTipo' tab_proveedor_id=modal_id|add:'-tab-proveedor' tab_area_id=modal_id|add:'-tab-area' pane_proveedor_id=modal_id|add:'-tabProveedorPane' pane_area_id=modal_id|add:'-tabAreaPane' %}
+<div class="modal fade" id="{{ modal_id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-tools me-2"></i>Gestionar elementos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="{{ tab_proveedor_id }}" data-bs-toggle="tab" data-bs-target="#{{ pane_proveedor_id }}" type="button" role="tab">Proveedores</button>
+                    </li>
+                    {% if show_area_tab %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="{{ tab_area_id }}" data-bs-toggle="tab" data-bs-target="#{{ pane_area_id }}" type="button" role="tab">Áreas</button>
+                    </li>
+                    {% endif %}
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="{{ pane_proveedor_id }}" role="tabpanel">
+                        <div id="{{ proveedor_list_id }}" class="list-group mb-3"></div>
+                        <div class="row g-2">
+                            <div class="col-md-7">
+                                <input id="{{ proveedor_name_id }}" type="text" class="form-control" placeholder="Nuevo proveedor (nombre)">
+                            </div>
+                            <div class="col-md-3">
+                                <input id="{{ proveedor_rut_id }}" type="text" class="form-control" placeholder="RUT (opcional)">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" type="button" id="{{ modal_id }}-btnAddProveedor" onclick="manageEntitiesAdd('proveedor')">Agregar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if show_area_tab %}
+                    <div class="tab-pane fade" id="{{ pane_area_id }}" role="tabpanel">
+                        <div id="{{ area_list_id }}" class="list-group mb-3"></div>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input id="{{ area_name_id }}" type="text" class="form-control" placeholder="Nueva área (nombre)">
+                            </div>
+                            <div class="col-md-4">
+                                <select id="{{ area_tipo_id }}" class="form-select">
+                                    {% for val,label in area_tipos %}
+                                    <option value="{{ val }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" type="button" onclick="manageEntitiesAdd('area')">Agregar</button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const modalConfig = {
+        modalId: '{{ modal_id }}',
+        proveedorSelectId: '{{ proveedor_select_id }}',
+        areaSelectId: '{{ area_select_id|default:'' }}',
+        hasAreaTab: {{ show_area_tab|default:False|yesno:'true,false' }},
+        ids: {
+            proveedorList: '{{ proveedor_list_id }}',
+            areaList: '{{ area_list_id }}',
+            proveedorName: '{{ proveedor_name_id }}',
+            proveedorRut: '{{ proveedor_rut_id }}',
+            areaName: '{{ area_name_id }}',
+            areaTipo: '{{ area_tipo_id }}',
+            addProveedorBtn: '{{ modal_id }}-btnAddProveedor',
+            tabProveedor: '{{ tab_proveedor_id }}',
+            tabArea: '{{ tab_area_id }}'
+        }
+    };
+
+    let modalInstance = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const modalEl = document.getElementById(modalConfig.modalId);
+        if (modalEl) {
+            modalInstance = new bootstrap.Modal(modalEl);
+        }
+    });
+
+    function fetchEntitiesAndShow(type) {
+        fetch('{% url "inventario:api_entities" %}')
+            .then(handleJsonResponse)
+            .then(data => {
+                if (data && data.success) {
+                    syncSelect('proveedor', data.proveedores);
+                    if (modalConfig.hasAreaTab) {
+                        syncSelect('area', data.areas);
+                    }
+                }
+            })
+            .catch(err => console.warn('No se pudo sincronizar entidades:', err))
+            .finally(() => {
+                populateList(type);
+                if (modalInstance) {
+                    modalInstance.show();
+                }
+            });
+    }
+
+    function syncSelect(type, items) {
+        const selectId = type === 'proveedor' ? modalConfig.proveedorSelectId : modalConfig.areaSelectId;
+        if (!selectId) return;
+        const selectEl = document.getElementById(selectId);
+        if (!selectEl) return;
+        selectEl.innerHTML = '';
+        (items || []).forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.text = item.nombre;
+            selectEl.appendChild(option);
+        });
+    }
+
+    function populateList(type) {
+        const listId = type === 'proveedor' ? modalConfig.ids.proveedorList : modalConfig.ids.areaList;
+        const selectId = type === 'proveedor' ? modalConfig.proveedorSelectId : modalConfig.areaSelectId;
+        const listEl = document.getElementById(listId);
+        if (!listEl) return;
+        listEl.innerHTML = '';
+        const selectEl = document.getElementById(selectId);
+        if (!selectEl) {
+            listEl.innerHTML = '<div class="text-muted text-center py-3">No hay elementos disponibles.</div>';
+            return;
+        }
+        if (!selectEl.options.length) {
+            listEl.innerHTML = '<div class="text-muted text-center py-3">No hay elementos registrados.</div>';
+            return;
+        }
+        Array.from(selectEl.options).forEach(opt => {
+            const item = document.createElement('div');
+            item.className = 'list-group-item d-flex justify-content-between align-items-center';
+            item.innerHTML = `<div>${opt.text}</div>`;
+            const btnGroup = document.createElement('div');
+            const useBtn = document.createElement('button');
+            useBtn.type = 'button';
+            useBtn.className = 'btn btn-sm btn-outline-success me-2';
+            useBtn.textContent = 'Usar';
+            useBtn.onclick = () => {
+                selectEl.value = opt.value;
+                selectEl.dispatchEvent(new Event('change'));
+                if (modalInstance) modalInstance.hide();
+            };
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'btn btn-sm btn-outline-danger';
+            delBtn.textContent = 'Eliminar';
+            delBtn.onclick = () => removeEntity(type, opt.value);
+            btnGroup.appendChild(useBtn);
+            btnGroup.appendChild(delBtn);
+            item.appendChild(btnGroup);
+            listEl.appendChild(item);
+        });
+    }
+
+    function handleJsonResponse(response) {
+        if (!response.ok) {
+            return response.text().then(text => { throw new Error(text || `Error ${response.status}`); });
+        }
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            return response.text().then(text => { throw new Error('Respuesta no JSON: ' + text); });
+        }
+        return response.json();
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function manageEntitiesAdd(type) {
+        const isProveedor = type === 'proveedor';
+        const inputId = isProveedor ? modalConfig.ids.proveedorName : modalConfig.ids.areaName;
+        const nameInput = document.getElementById(inputId);
+        if (!nameInput) return;
+        const name = nameInput.value.trim();
+        if (!name) {
+            alert('Ingresa un nombre válido');
+            return;
+        }
+        const payload = { type, name };
+        if (isProveedor) {
+            const rutInput = document.getElementById(modalConfig.ids.proveedorRut);
+            payload.rut = rutInput ? rutInput.value.trim() : '';
+        } else if (modalConfig.hasAreaTab) {
+            const tipoSelect = document.getElementById(modalConfig.ids.areaTipo);
+            payload.tipo = tipoSelect ? tipoSelect.value : 'BODEGA';
+        }
+
+        const btn = isProveedor ? document.getElementById(modalConfig.ids.addProveedorBtn) : null;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Agregando';
+        }
+
+        fetch('{% url "inventario:api_create_entity" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(handleJsonResponse)
+        .then(data => {
+            if (!data.success) throw new Error(data.error || 'Error desconocido');
+            const selectId = isProveedor ? modalConfig.proveedorSelectId : modalConfig.areaSelectId;
+            if (selectId) {
+                const selectEl = document.getElementById(selectId);
+                if (selectEl) {
+                    const opt = document.createElement('option');
+                    opt.value = data.id;
+                    opt.text = data.nombre;
+                    opt.selected = true;
+                    selectEl.appendChild(opt);
+                }
+            }
+            nameInput.value = '';
+            if (isProveedor) {
+                const rutInput = document.getElementById(modalConfig.ids.proveedorRut);
+                if (rutInput) rutInput.value = '';
+            }
+            populateList(type);
+        })
+        .catch(err => alert('No se pudo crear el elemento: ' + err.message))
+        .finally(() => {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Agregar';
+            }
+        });
+    }
+
+    function removeEntity(type, value) {
+        if (!confirm('Eliminar elemento seleccionado? Esta acción lo desactivará en el sistema.')) return;
+        fetch('{% url "inventario:api_delete_entity" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ type, id: value })
+        })
+        .then(handleJsonResponse)
+        .then(data => {
+            if (!data.success) throw new Error(data.error || 'Error al eliminar');
+            const selectId = type === 'proveedor' ? modalConfig.proveedorSelectId : modalConfig.areaSelectId;
+            const selectEl = document.getElementById(selectId);
+            if (selectEl) {
+                const opt = Array.from(selectEl.options).find(o => o.value == value);
+                if (opt) opt.remove();
+            }
+            populateList(type);
+        })
+        .catch(err => alert('No se pudo eliminar el elemento: ' + err.message));
+    }
+
+    window.openManageModal = function(type) {
+        const selectedType = (type === 'area' && modalConfig.hasAreaTab) ? 'area' : 'proveedor';
+        const tabSelector = selectedType === 'proveedor' ? `#${modalConfig.ids.tabProveedor}` : `#${modalConfig.ids.tabArea}`;
+        const tabTrigger = document.querySelector(tabSelector);
+        if (tabTrigger) {
+            const tab = new bootstrap.Tab(tabTrigger);
+            tab.show();
+        }
+        fetchEntitiesAndShow(selectedType);
+    };
+
+    window.manageEntitiesAdd = manageEntitiesAdd;
+})();
+</script>
+{% endwith %}
+{% endwith %}
+{% endwith %}

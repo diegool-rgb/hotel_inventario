@@ -5,6 +5,7 @@ from django.db.models import Sum, Count, Q
 from django.http import JsonResponse
 from django.contrib import messages
 from django.db import transaction
+from django.db import IntegrityError
 from django.urls import reverse
 from django.utils.http import urlencode
 from decimal import Decimal
@@ -12,7 +13,7 @@ from datetime import date
 from .models import Producto, Stock, Movimiento, AlertaStock, Area, Categoria, Proveedor, EntradaStock, DetalleEntradaStock
 from .forms import AgregarProductoForm, EntradaStockForm, DetalleEntradaFormSet, ProveedorForm
 import json
-import time
+import uuid
 from django.http import HttpResponse
 import csv
 
@@ -242,8 +243,52 @@ def detalle_producto(request, producto_id):
 @login_required
 def alertas_stock(request):
     """Vista para mostrar alertas de stock"""
+    from django.utils import timezone
+
+    # Sincronizar alertas en base al stock real para evitar inconsistencias
+    productos = Producto.objects.filter(activo=True).annotate(
+        stock_total_actual=Sum('stocks__cantidad')
+    )
+    alertas_activas = {
+        alerta.producto_id: alerta
+        for alerta in AlertaStock.objects.filter(estado='ACTIVA', area__isnull=True)
+    }
+
+    for producto in productos:
+        stock_actual = producto.stock_total_actual or Decimal('0')
+        stock_minimo = producto.stock_minimo or Decimal('0')
+        alerta_activa = alertas_activas.get(producto.id)
+
+        if stock_actual <= stock_minimo:
+            if alerta_activa:
+                campos_actualizados = []
+                if alerta_activa.stock_actual != stock_actual:
+                    alerta_activa.stock_actual = stock_actual
+                    campos_actualizados.append('stock_actual')
+                if alerta_activa.stock_minimo != stock_minimo:
+                    alerta_activa.stock_minimo = stock_minimo
+                    campos_actualizados.append('stock_minimo')
+                if campos_actualizados:
+                    alerta_activa.save(update_fields=campos_actualizados)
+            else:
+                alerta_activa = AlertaStock.objects.create(
+                    producto=producto,
+                    stock_actual=stock_actual,
+                    stock_minimo=stock_minimo,
+                    estado='ACTIVA'
+                )
+                alertas_activas[producto.id] = alerta_activa
+        else:
+            if alerta_activa:
+                alerta_activa.estado = 'RESUELTA'
+                alerta_activa.fecha_resolucion = timezone.now()
+                alerta_activa.stock_actual = stock_actual
+                alerta_activa.save(update_fields=['estado', 'fecha_resolucion', 'stock_actual'])
+                alertas_activas.pop(producto.id, None)
+
+    alertas_queryset = AlertaStock.objects.select_related('producto', 'area').filter(estado='ACTIVA')
     alertas_list = []
-    for alerta in AlertaStock.objects.select_related('producto', 'area').filter(estado='ACTIVA'):
+    for alerta in alertas_queryset:
         porcentaje = (alerta.stock_actual / alerta.stock_minimo * 100) if alerta.stock_minimo > 0 else 0
         critico = porcentaje < 50
         alertas_list.append({
@@ -1122,6 +1167,9 @@ def entrada_stock_simple(request):
     """Vista simplificada para entrada de stock con interfaz de cards"""
     from datetime import date
     
+    producto_param = request.GET.get('producto')
+    producto_preseleccionado = None
+
     # Generar próximo número de entrada automáticamente
     ultima_entrada_num = EntradaStock.objects.all().order_by('-id').first()
     if ultima_entrada_num:
@@ -1239,6 +1287,8 @@ def entrada_stock_simple(request):
             producto.ultimo_precio = producto.precio_unitario or 0
             
         productos_con_info.append(producto)
+        if producto_param and str(producto.id) == str(producto_param):
+            producto_preseleccionado = producto
     
     context = {
         'productos': productos_con_info,
@@ -1247,6 +1297,7 @@ def entrada_stock_simple(request):
         'categorias': Categoria.objects.filter(activo=True),
         'fecha_hoy': date.today().isoformat(),
         'proximo_numero': proximo_numero,
+        'producto_preseleccionado': producto_preseleccionado,
     }
     return render(request, 'inventario/entrada_stock_simple.html', context)
 
@@ -1390,10 +1441,25 @@ def api_create_entity(request):
             return JsonResponse({'success': False, 'error': 'Nombre requerido'}, status=400)
 
         if typ == 'proveedor':
-            # Proveedor requiere rut único; generar uno automático si no se proporciona
-            rut = data.get('rut') or f'AUTO-{int(time.time())}'
-            prov = Proveedor.objects.create(nombre=name, rut=rut, activo=True)
-            return JsonResponse({'success': True, 'id': prov.id, 'nombre': prov.nombre, 'type': 'proveedor'})
+            # Proveedor requiere rut único; generar uno estable y único si no se proporciona
+            rut = (data.get('rut') or '').strip()
+
+            def _auto_rut():
+                return f"AUTO-{uuid.uuid4().hex[:10].upper()}"
+
+            intentos = 0
+            while intentos < 5:
+                intentos += 1
+                rut_a_usar = rut or _auto_rut()
+                try:
+                    prov = Proveedor.objects.create(nombre=name, rut=rut_a_usar, activo=True)
+                    return JsonResponse({'success': True, 'id': prov.id, 'nombre': prov.nombre, 'type': 'proveedor'})
+                except IntegrityError:
+                    if rut:  # Si el usuario lo escribió, informar conflicto
+                        return JsonResponse({'success': False, 'error': 'El RUT ingresado ya existe.'}, status=400)
+                    rut = None  # Forzar generación de un nuevo RUT automático y reintentar
+
+            return JsonResponse({'success': False, 'error': 'No se pudo generar un RUT único, intenta nuevamente.'}, status=500)
 
         elif typ == 'area':
             tipo = data.get('tipo') or 'BODEGA'

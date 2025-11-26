@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Registrar recepción - {{ pedido.numero_pedido }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <h1 class="display-6 fw-bold mb-2">
+                <i class="bi bi-truck text-success me-2"></i>
+                Registrar recepción
+            </h1>
+            <p class="text-muted mb-0">Confirma la llegada del pedido {{ pedido.numero_pedido }} para actualizar el stock automáticamente.</p>
+        </div>
+        <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+            <a href="{% url 'inventario:alertas' %}" class="btn btn-outline-secondary btn-modern">
+                <i class="bi bi-arrow-left me-2"></i>Volver a alertas
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-4">
+            <div class="card card-modern h-100">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="mb-0">
+                        <i class="bi bi-receipt-cutoff me-2 text-primary"></i>Pedido
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1 fw-semibold">{{ pedido.numero_pedido }}</p>
+                    <small class="text-muted d-block mb-3">{{ pedido.proveedor.razon_social }}</small>
+                    <div class="bg-light rounded p-3 mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Producto</span>
+                            <span class="fw-semibold">{{ producto.nombre }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Cantidad pedida</span>
+                            <span class="fw-semibold">{{ detalle.cantidad_pedida|floatformat:2 }} {{ producto.get_unidad_medida_display }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Recibido</span>
+                            <span class="fw-semibold">{{ detalle.cantidad_recibida|floatformat:2 }} {{ producto.get_unidad_medida_display }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Pendiente</span>
+                            <span class="fw-semibold text-danger">{{ pendiente|floatformat:2 }} {{ producto.get_unidad_medida_display }}</span>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-0">Al confirmar, se generará una entrada de stock y se actualizará el estado del pedido.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-8">
+            <div class="card card-modern h-100">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="mb-0">
+                        <i class="bi bi-box-arrow-in-down me-2 text-success"></i>Datos de la recepción
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Área de ingreso</label>
+                                {{ form.area_destino }}
+                                {% if form.area_destino.errors %}
+                                    <div class="text-danger small">{{ form.area_destino.errors|join:', ' }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Cantidad recibida</label>
+                                {{ form.cantidad }}
+                                {% if form.cantidad.errors %}
+                                    <div class="text-danger small">{{ form.cantidad.errors|join:', ' }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Precio unitario</label>
+                                {{ form.precio_unitario }}
+                                {% if form.precio_unitario.errors %}
+                                    <div class="text-danger small">{{ form.precio_unitario.errors|join:', ' }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha de compra</label>
+                                {{ form.fecha_compra }}
+                                {% if form.fecha_compra.errors %}
+                                    <div class="text-danger small">{{ form.fecha_compra.errors|join:', ' }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Factura/Boleta</label>
+                                {{ form.numero_documento }}
+                                {% if form.numero_documento.errors %}
+                                    <div class="text-danger small">{{ form.numero_documento.errors|join:', ' }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Observaciones</label>
+                                {{ form.observaciones }}
+                                {% if form.observaciones.errors %}
+                                    <div class="text-danger small">{{ form.observaciones.errors|join:', ' }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-3 mt-4">
+                            <a href="{% url 'inventario:alertas' %}" class="btn btn-outline-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check2-circle me-2"></i>Confirmar recepción
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

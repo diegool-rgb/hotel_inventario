@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
+from django.utils import timezone
 from decimal import Decimal
 from inventario.models import Producto
 
@@ -57,7 +58,8 @@ class Pedido(models.Model):
     def save(self, *args, **kwargs):
         if not self.numero_pedido:
             # Generar número de pedido automático
-            year = self.fecha_pedido.year if hasattr(self, 'fecha_pedido') else 2024
+            fecha_referencia = self.fecha_pedido or timezone.now()
+            year = fecha_referencia.year
             count = Pedido.objects.filter(fecha_pedido__year=year).count() + 1
             self.numero_pedido = f"PED-{year}-{count:04d}"
         super().save(*args, **kwargs)

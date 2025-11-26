@@ -158,14 +158,14 @@
 
                         <!-- Acciones principales -->
                         <div class="d-flex gap-2 mt-3">
-                            <button class="btn {% if item.critico %}btn-danger{% else %}btn-warning{% endif %} btn-sm flex-grow-1" onclick="createPurchaseOrder({{ item.alerta.producto.id }})">
-                                <i class="bi bi-cart-plus me-1"></i>
-                                Crear Pedido
-                            </button>
-                            <button class="btn btn-outline-primary btn-sm" onclick="adjustStock({{ item.alerta.producto.id }})">
-                                <i class="bi bi-plus-minus me-1"></i>
-                                Ajustar
-                            </button>
+                            <a class="btn {% if item.critico %}btn-danger{% else %}btn-warning{% endif %} btn-sm flex-grow-1" href="{% url 'inventario:entrada_stock' %}?producto={{ item.alerta.producto.id }}">
+                                <i class="bi bi-plus-circle me-1"></i>
+                                Agregar Stock
+                            </a>
+                            <a class="btn btn-outline-secondary btn-sm" href="{% url 'inventario:detalle_producto' item.alerta.producto.id %}">
+                                <i class="bi bi-eye me-1"></i>
+                                Ver detalle
+                            </a>
                             <button class="btn btn-success btn-sm" onclick="resolveAlert({{ item.alerta.id }})">
                                 <i class="bi bi-check"></i>
                             </button>
@@ -344,21 +344,6 @@ function markAllAsResolved() {
             location.reload();
         }, 2000);
     }
-}
-
-// Función para crear orden de compra
-function createPurchaseOrder(productId) {
-    showNotification('Redirigiendo a crear pedido...', 'info');
-    // Aquí podrías redirigir a la página de crear pedido
-    setTimeout(() => {
-        window.location.href = '/admin/pedidos/pedido/add/';
-    }, 1000);
-}
-
-// Función para ajustar stock
-function adjustStock(productId) {
-    showNotification('Función en desarrollo: Ajustar stock', 'info');
-    // Aquí implementarías un modal para ajustar stock
 }
 
 // Función para exportar alertas

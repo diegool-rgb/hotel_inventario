@@ -102,7 +102,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'Hotel_Inventario',
         'USER': 'postgres',
-        'PASSWORD': '123',
+        'PASSWORD': 'Inacap2025',
         'HOST': 'localhost',
         'PORT': '5432',
     }

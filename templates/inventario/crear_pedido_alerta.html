@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear pedido - {{ producto.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <h1 class="display-6 fw-bold mb-2">
+                <i class="bi bi-cart-plus text-danger me-2"></i>
+                Crear pedido para {{ producto.nombre }}
+            </h1>
+            <p class="text-muted mb-0">Convierte la alerta en un pedido formal para el proveedor seleccionado.</p>
+        </div>
+        <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+            <a href="{% url 'inventario:alertas' %}" class="btn btn-outline-secondary btn-modern">
+                <i class="bi bi-arrow-left me-2"></i>Volver a alertas
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-4">
+            <div class="card card-modern h-100">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="mb-0">
+                        <i class="bi bi-box-seam me-2 text-primary"></i>Producto
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="fw-semibold mb-1">{{ producto.nombre }}</p>
+                    <small class="text-muted d-block mb-3">{{ producto.codigo }} • {{ producto.categoria.nombre }}</small>
+
+                    <div class="bg-light rounded p-3 mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Stock actual</span>
+                            <span class="fw-semibold">{{ stock_total|floatformat:2 }} {{ producto.get_unidad_medida_display }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Stock mínimo</span>
+                            <span class="fw-semibold text-warning">{{ producto.stock_minimo|floatformat:2 }} {{ producto.get_unidad_medida_display }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Faltante estimado</span>
+                            <span class="fw-semibold text-danger">{{ faltante|floatformat:2 }} {{ producto.get_unidad_medida_display }}</span>
+                        </div>
+                    </div>
+
+                    <p class="text-muted small mb-0">
+                        Este pedido se guardará como <strong>borrador</strong> para que puedas seguir gestionándolo desde el módulo de pedidos.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-8">
+            <div class="card card-modern h-100">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="mb-0">
+                        <i class="bi bi-journal-plus me-2 text-success"></i>Datos del pedido
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Proveedor</label>
+                                {{ form.proveedor }}
+                                {% if form.proveedor.errors %}
+                                    <div class="text-danger small">{{ form.proveedor.errors|join:', ' }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Cantidad</label>
+                                {{ form.cantidad }}
+                                {% if form.cantidad.errors %}
+                                    <div class="text-danger small">{{ form.cantidad.errors|join:', ' }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Precio unitario</label>
+                                {{ form.precio_unitario }}
+                                {% if form.precio_unitario.errors %}
+                                    <div class="text-danger small">{{ form.precio_unitario.errors|join:', ' }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha estimada</label>
+                                {{ form.fecha_entrega_estimada }}
+                                {% if form.fecha_entrega_estimada.errors %}
+                                    <div class="text-danger small">{{ form.fecha_entrega_estimada.errors|join:', ' }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Observaciones</label>
+                                {{ form.observaciones }}
+                                {% if form.observaciones.errors %}
+                                    <div class="text-danger small">{{ form.observaciones.errors|join:', ' }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-3 mt-4">
+                            <a href="{% url 'inventario:alertas' %}" class="btn btn-outline-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-check2-circle me-2"></i>Guardar pedido
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

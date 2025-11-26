@@ -64,16 +64,15 @@
 
                         <!-- Proveedor -->
                         <div class="mb-3">
-                            <label for="{{ entrada_form.proveedor.id_for_label }}" class="form-label fw-bold">
-                                <i class="bi bi-building me-1"></i>Proveedor
-                            </label>
-                            <div class="input-group">
-                                {{ entrada_form.proveedor }}
-                                <a href="{% url 'inventario:agregar_proveedor' %}?producto_id={{ producto.id }}" 
-                                   class="btn btn-outline-success" target="_blank">
-                                    <i class="bi bi-plus-lg"></i>
-                                </a>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label for="{{ entrada_form.proveedor.id_for_label }}" class="form-label fw-bold mb-0">
+                                    <i class="bi bi-building me-1"></i>Proveedor
+                                </label>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="openProveedorModal()">
+                                    <i class="bi bi-tools me-1"></i>Gestionar
+                                </button>
                             </div>
+                            {{ entrada_form.proveedor }}
                         </div>
 
                         <!-- Fecha de Compra -->
@@ -262,6 +261,227 @@ function removeProductForm(button) {
     button.closest('.product-form').remove();
     formCount--;
     document.getElementById('id_detalles-TOTAL_FORMS').value = formCount;
+}
+</script>
+
+<!-- Modal para gestionar proveedores -->
+<div class="modal fade" id="manageProveedorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-tools me-2"></i>Gestionar proveedores</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="manageProveedorList" class="list-group mb-3"></div>
+                <div class="row g-2">
+                    <div class="col-md-7">
+                        <input id="manageProveedorNombre" type="text" class="form-control" placeholder="Nuevo proveedor (nombre)">
+                    </div>
+                    <div class="col-md-3">
+                        <input id="manageProveedorRut" type="text" class="form-control" placeholder="RUT (opcional)">
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" type="button" onclick="crearProveedorDesdeModal()">Agregar</button>
+                    </div>
+                </div>
+                <div id="manageProveedorAlert" class="alert alert-danger mt-3 d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const proveedorSelectId = '{{ entrada_form.proveedor.id_for_label }}';
+let proveedorModalInstance = null;
+let proveedoresCache = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    const modalEl = document.getElementById('manageProveedorModal');
+    if (modalEl) {
+        proveedorModalInstance = new bootstrap.Modal(modalEl);
+    }
+});
+
+function openProveedorModal() {
+    ocultarProveedorAlert();
+    fetch("{% url 'inventario:api_entities' %}")
+        .then(handleJsonResponse)
+        .then(data => {
+            if (data.success) {
+                proveedoresCache = data.proveedores || [];
+                renderProveedorList();
+            } else {
+                mostrarProveedorAlert(data.error || 'No se pudieron cargar los proveedores.');
+            }
+            proveedorModalInstance.show();
+        })
+        .catch(err => {
+            mostrarProveedorAlert(err.message || 'Error al cargar proveedores.');
+            proveedorModalInstance.show();
+        });
+}
+
+function renderProveedorList() {
+    const list = document.getElementById('manageProveedorList');
+    list.innerHTML = '';
+    if (!proveedoresCache.length) {
+        list.innerHTML = '<div class="text-muted text-center py-3">No hay proveedores registrados.</div>';
+        return;
+    }
+
+    proveedoresCache.forEach(prov => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item d-flex justify-content-between align-items-center';
+        item.innerHTML = `<div>${prov.nombre}</div>`;
+
+        const actions = document.createElement('div');
+        const useBtn = document.createElement('button');
+        useBtn.type = 'button';
+        useBtn.className = 'btn btn-sm btn-outline-success me-2';
+        useBtn.textContent = 'Usar';
+        useBtn.onclick = () => seleccionarProveedor(prov);
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn btn-sm btn-outline-danger';
+        delBtn.textContent = 'Eliminar';
+        delBtn.onclick = () => eliminarProveedor(prov.id);
+
+        actions.appendChild(useBtn);
+        actions.appendChild(delBtn);
+        item.appendChild(actions);
+        list.appendChild(item);
+    });
+}
+
+function seleccionarProveedor(prov) {
+    const select = document.getElementById(proveedorSelectId);
+    asegurarProveedorEnSelect(prov, select);
+    select.value = String(prov.id);
+    select.dispatchEvent(new Event('change'));
+    if (proveedorModalInstance) {
+        proveedorModalInstance.hide();
+    }
+}
+
+function asegurarProveedorEnSelect(prov, select) {
+    let option = Array.from(select.options).find(opt => String(opt.value) === String(prov.id));
+    if (!option) {
+        option = new Option(prov.nombre, prov.id, true, true);
+        select.add(option);
+    }
+}
+
+function crearProveedorDesdeModal() {
+    ocultarProveedorAlert();
+    const nombre = document.getElementById('manageProveedorNombre').value.trim();
+    const rut = document.getElementById('manageProveedorRut').value.trim();
+    if (!nombre) {
+        mostrarProveedorAlert('Ingresa el nombre del proveedor.');
+        return;
+    }
+
+    postJson("{% url 'inventario:api_create_entity' %}", {
+        type: 'proveedor',
+        name: nombre,
+        rut: rut
+    })
+    .then(handleJsonResponse)
+    .then(data => {
+        if (data.success) {
+            const nuevo = { id: data.id, nombre: data.nombre };
+            proveedoresCache.push(nuevo);
+            renderProveedorList();
+            document.getElementById('manageProveedorNombre').value = '';
+            document.getElementById('manageProveedorRut').value = '';
+            seleccionarProveedor(nuevo);
+        } else {
+            mostrarProveedorAlert(data.error || 'No se pudo crear el proveedor.');
+        }
+    })
+    .catch(err => mostrarProveedorAlert(err.message || 'Error al crear proveedor.'));
+}
+
+function eliminarProveedor(id) {
+    if (!confirm('¿Eliminar este proveedor? (se desactivará en la lista)')) {
+        return;
+    }
+
+    postJson("{% url 'inventario:api_delete_entity' %}", {
+        type: 'proveedor',
+        id: id
+    })
+    .then(handleJsonResponse)
+    .then(data => {
+        if (data.success) {
+            proveedoresCache = proveedoresCache.filter(p => p.id !== id);
+            quitarProveedorDelSelect(id);
+            renderProveedorList();
+        } else {
+            mostrarProveedorAlert(data.error || 'No se pudo eliminar el proveedor.');
+        }
+    })
+    .catch(err => mostrarProveedorAlert(err.message || 'Error al eliminar proveedor.'));
+}
+
+function quitarProveedorDelSelect(id) {
+    const select = document.getElementById(proveedorSelectId);
+    Array.from(select.options).forEach(opt => {
+        if (String(opt.value) === String(id)) {
+            opt.remove();
+        }
+    });
+}
+
+function mostrarProveedorAlert(mensaje) {
+    const alert = document.getElementById('manageProveedorAlert');
+    alert.textContent = mensaje;
+    alert.classList.remove('d-none');
+}
+
+function ocultarProveedorAlert() {
+    const alert = document.getElementById('manageProveedorAlert');
+    alert.classList.add('d-none');
+    alert.textContent = '';
+}
+
+function handleJsonResponse(response) {
+    if (!response.ok) {
+        return response.text().then(text => {
+            throw new Error(text || `Error ${response.status}`);
+        });
+    }
+    return response.json();
+}
+
+function postJson(url, payload) {
+    return fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(payload)
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 </script>
 {% endblock %}

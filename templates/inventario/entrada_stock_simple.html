@@ -1,318 +1,363 @@
 {% extends 'base.html' %}
 
-{% block title %}Agregar Stock Fácil{% endblock %}
+{% block title %}Agregar Stock{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h2 class="mb-4 text-primary">🏨 Agregar Stock al Inventario</h2>
-    
-    <div class="alert alert-info mb-4">
-        <i class="bi bi-info-circle"></i> <strong>Instrucciones:</strong> Busca el producto, selecciónalo y completa los datos para agregar stock.
-    </div>
-
-    <!-- BÚSQUEDA -->
-    <div class="card mb-4" style="background: linear-gradient(135deg, #007bff, #0056b3); color: white;">
-        <div class="card-body">
-            <h5 class="mb-3"><i class="bi bi-search"></i> Paso 1: Buscar Producto</h5>
-            <div class="input-group">
-                <input type="text" 
-                       class="form-control form-control-lg" 
-                       id="txtBusqueda" 
-                       placeholder="Escribe el nombre del producto (ej: acondicionador, jabón...)"
-                       onkeyup="buscarProductos()"
-                       autocomplete="off">
-                <button class="btn btn-light btn-lg" type="button" onclick="buscarProductos()">
-                    <i class="bi bi-search"></i> BUSCAR
-                </button>
-            </div>
-            
-            <div id="resultadosBusqueda" 
-                 style="display: none; background: white; color: black; border-radius: 8px; margin-top: 15px; max-height: 300px; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-primary mb-1">Agregar Stock al Inventario</h2>
+            <p class="text-muted mb-0">Revisa el producto seleccionado y registra la nueva compra.</p>
         </div>
+        <a href="{% url 'inventario:productos' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Volver a productos
+        </a>
     </div>
 
-    <!-- PRODUCTO SELECCIONADO -->
-    <div id="productoElegido" class="card mb-4" style="display: none; border-left: 5px solid #28a745;">
-        <div class="card-body">
-            <h5 class="text-success"><i class="bi bi-check-circle"></i> Paso 2: Producto Seleccionado</h5>
-            <div id="datosProducto" class="mt-3"></div>
+    {% if not producto_preseleccionado %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            No se encontró un producto seleccionado. Regresa al listado y elige uno para agregar stock.
         </div>
-    </div>
-
-    <!-- FORMULARIO -->
-    <div id="formularioCompleto" class="card" style="display: none;">
-        <div class="card-body">
-            <h5 class="text-primary mb-4"><i class="bi bi-pencil"></i> Paso 3: Completar Información</h5>
-            
-            <form method="post" onsubmit="return validarDatos()">
-                {% csrf_token %}
-                <input type="hidden" id="idProducto" name="producto_id">
-                
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-bold text-primary">
-                            <i class="bi bi-plus-circle"></i> Cantidad *
-                        </label>
-                        <input type="number" 
-                               class="form-control form-control-lg" 
-                               name="cantidad" 
-                               id="inputCantidad" 
-                               min="0.01" 
-                               step="0.01" 
-                               placeholder="Ejemplo: 10" 
-                               required>
-                        <small class="text-muted">¿Cuántas unidades agregaste?</small>
+    {% else %}
+        <div class="card mb-4 border-success">
+            <div class="card-body">
+                <h5 class="text-success mb-3"><i class="bi bi-check-circle me-2"></i>Producto seleccionado</h5>
+                <div class="row gy-3">
+                    <div class="col-md-4">
+                        <div class="text-muted small">Producto</div>
+                        <div class="fw-bold">{{ producto_preseleccionado.nombre }}</div>
+                        <div class="small text-muted">Código: {{ producto_preseleccionado.codigo }}</div>
                     </div>
-                    
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-bold text-primary">
-                            <i class="bi bi-geo-alt"></i> Área de Almacenamiento *
-                        </label>
-                        <select class="form-select form-control-lg" name="area" id="selectArea" required>
-                            <option value="">Selecciona el área</option>
-                            {% for area in areas %}
-                            <option value="{{ area.id }}">{{ area.nombre }}</option>
-                            {% endfor %}
-                        </select>
-                        <small class="text-muted">¿Dónde guardaste el producto?</small>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Categoría</div>
+                        <div class="fw-bold">{{ producto_preseleccionado.categoria.nombre }}</div>
                     </div>
-                    
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-bold">
-                            <i class="bi bi-building"></i> Proveedor
-                        </label>
-                        <select class="form-select form-control-lg" name="proveedor" id="selectProveedor">
-                            <option value="">Sin proveedor específico</option>
-                            {% for proveedor in proveedores %}
-                            <option value="{{ proveedor.id }}">{{ proveedor.nombre }}</option>
-                            {% endfor %}
-                        </select>
-                        <small class="text-muted">Opcional</small>
-                    </div>
-                    
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">
-                            <i class="bi bi-cash"></i> Precio Unitario
-                        </label>
-                        <input type="number" 
-                               class="form-control form-control-lg" 
-                               name="precio" 
-                               id="inputPrecio" 
-                               min="0" 
-                               step="0.01" 
-                               placeholder="0.00">
-                        <small class="text-muted">¿Cuánto costó cada unidad? (Opcional)</small>
-                    </div>
-                    
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">
-                            <i class="bi bi-calendar"></i> Fecha de Compra
-                        </label>
-                        <input type="date" 
-                               class="form-control form-control-lg" 
-                               name="fecha_compra" 
-                               id="inputFecha" 
-                               value="{{ fecha_hoy }}">
-                        <small class="text-muted">¿Cuándo compraste el producto?</small>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Stock actual</div>
+                        <span class="badge bg-info fs-6">{{ producto_preseleccionado.stock_total|default:0 }} {{ producto_preseleccionado.unidad_medida }}</span>
                     </div>
                 </div>
-                
-                <div class="d-flex justify-content-between mt-4">
-                    <button type="button" class="btn btn-secondary btn-lg" onclick="limpiarTodo()">
-                        <i class="bi bi-arrow-counterclockwise"></i> Limpiar Todo
-                    </button>
-                    <button type="submit" class="btn btn-success btn-lg">
-                        <i class="bi bi-check-circle-fill"></i> AGREGAR STOCK
-                    </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h5 class="text-primary mb-4"><i class="bi bi-pencil-square me-2"></i>Registrar entrada</h5>
+                <form method="post" onsubmit="return validarFormulario()">
+                    {% csrf_token %}
+                    <input type="hidden" name="producto_id" id="idProducto" value="{{ producto_preseleccionado.id }}">
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold text-primary"><i class="bi bi-plus-circle"></i> Cantidad *</label>
+                            <input type="number" class="form-control form-control-lg" name="cantidad" id="inputCantidad" min="0.01" step="0.01" placeholder="Ejemplo: 10" required>
+                            <small class="text-muted">¿Cuántas unidades agregaste?</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold text-primary"><i class="bi bi-geo-alt"></i> Área de almacenamiento *</label>
+                            <select class="form-select form-control-lg" name="area" id="selectArea" required>
+                                <option value="">Selecciona el área</option>
+                                {% for area in areas %}
+                                    <option value="{{ area.id }}" {% if producto_preseleccionado.ultima_area and area.id == producto_preseleccionado.ultima_area.id %}selected{% endif %}>{{ area.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">¿Dónde guardaste el producto?</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold"><i class="bi bi-building"></i> Proveedor</label>
+                            <div class="d-flex align-items-start gap-2">
+                                <select class="form-select form-control-lg" name="proveedor" id="selectProveedor">
+                                    <option value="">Sin proveedor específico</option>
+                                    {% for proveedor in proveedores %}
+                                        <option value="{{ proveedor.id }}" {% if producto_preseleccionado.ultimo_proveedor and proveedor.id == producto_preseleccionado.ultimo_proveedor.id %}selected{% endif %}>{{ proveedor.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="button" class="btn btn-outline-secondary" onclick="abrirModalProveedor()">
+                                    <i class="bi bi-tools"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Añade o selecciona proveedores sin salir.</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold"><i class="bi bi-cash"></i> Precio unitario</label>
+                            <input type="number" class="form-control form-control-lg" name="precio" id="inputPrecio" min="0" step="0.01" placeholder="0.00" value="{% if producto_preseleccionado.ultimo_precio %}{{ producto_preseleccionado.ultimo_precio }}{% endif %}">
+                            <small class="text-muted">Opcional.</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold"><i class="bi bi-calendar"></i> Fecha de compra</label>
+                            <input type="date" class="form-control form-control-lg" name="fecha_compra" id="inputFecha" value="{{ fecha_hoy }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-secondary btn-lg" onclick="limpiarFormulario()">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar campos
+                        </button>
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-check-circle-fill me-1"></i>Agregar stock
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Modal gestionar proveedores -->
+<div class="modal fade" id="modalProveedores" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-tools me-2"></i>Gestionar proveedores</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="listaProveedoresModal" class="list-group mb-3"></div>
+                <div class="row g-2">
+                    <div class="col-md-7">
+                        <input type="text" id="inputNuevoProveedor" class="form-control" placeholder="Nombre del proveedor">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" id="inputNuevoRut" class="form-control" placeholder="RUT opcional">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" id="btnAgregarProveedorModal" class="btn btn-primary w-100" onclick="crearProveedorModal()">Agregar</button>
+                    </div>
                 </div>
-            </form>
+                <div id="alertaProveedor" class="alert alert-danger mt-3 d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-// Lista de productos disponibles
-var listaProductos = [
-    {% for producto in productos %}
-    {
-        id: {{ producto.id }},
-        nombre: "{{ producto.nombre|escapejs }}",
-        codigo: "{{ producto.codigo|escapejs }}",
-        categoria: "{{ producto.categoria.nombre|escapejs }}",
-        stock_actual: {{ producto.stock_total|default:0 }}
-    }{% if not forloop.last %},{% endif %}
-    {% endfor %}
-];
+const productoSeleccionado = {% if producto_preseleccionado %}{
+    id: {{ producto_preseleccionado.id }},
+    nombre: "{{ producto_preseleccionado.nombre|escapejs }}"
+}{% else %}null{% endif %};
+let modalProveedoresInstance = null;
+let proveedoresCache = [];
+let creandoProveedor = false;
 
-var productoActualSeleccionado = null;
-
-// Función principal de búsqueda
-function buscarProductos() {
-    var textoBusqueda = document.getElementById('txtBusqueda').value.toLowerCase().trim();
-    var contenedorResultados = document.getElementById('resultadosBusqueda');
-    
-    // Si hay menos de 2 caracteres, ocultar resultados
-    if (textoBusqueda.length < 2) {
-        contenedorResultados.style.display = 'none';
-        return;
-    }
-    
-    // Buscar productos que coincidan
-    var productosEncontrados = listaProductos.filter(function(producto) {
-        return producto.nombre.toLowerCase().includes(textoBusqueda) || 
-               producto.codigo.toLowerCase().includes(textoBusqueda) ||
-               producto.categoria.toLowerCase().includes(textoBusqueda);
-    });
-    
-    // Si no se encontraron productos
-    if (productosEncontrados.length === 0) {
-        contenedorResultados.innerHTML = '<div class="p-3 text-center text-muted"><i class="bi bi-exclamation-circle"></i><br>No se encontraron productos con ese nombre</div>';
-        contenedorResultados.style.display = 'block';
-        return;
-    }
-    
-    // Construir HTML con los resultados
-    var htmlResultados = '';
-    for (var i = 0; i < Math.min(productosEncontrados.length, 8); i++) {
-        var prod = productosEncontrados[i];
-        htmlResultados += '<div class="p-3 border-bottom" style="cursor: pointer; transition: background 0.2s;" ';
-        htmlResultados += 'onmouseover="this.style.background=\'#f8f9fa\'" ';
-        htmlResultados += 'onmouseout="this.style.background=\'white\'" ';
-        htmlResultados += 'onclick="seleccionarProducto(' + prod.id + ')">';
-        htmlResultados += '<div class="fw-bold text-dark">' + prod.nombre + '</div>';
-        htmlResultados += '<small class="text-muted">';
-        htmlResultados += '<span class="badge bg-secondary me-2">' + prod.codigo + '</span>';
-        htmlResultados += prod.categoria + ' | Stock actual: <strong>' + prod.stock_actual + '</strong> unidades';
-        htmlResultados += '</small></div>';
-    }
-    
-    contenedorResultados.innerHTML = htmlResultados;
-    contenedorResultados.style.display = 'block';
-}
-
-// Función para seleccionar un producto
-function seleccionarProducto(idProducto) {
-    // Buscar el producto en la lista
-    productoActualSeleccionado = listaProductos.find(function(p) { 
-        return p.id === idProducto; 
-    });
-    
-    if (!productoActualSeleccionado) {
-        alert('Error: No se pudo seleccionar el producto');
-        return;
-    }
-    
-    // Actualizar el campo de búsqueda
-    document.getElementById('txtBusqueda').value = productoActualSeleccionado.nombre;
-    
-    // Ocultar resultados de búsqueda
-    document.getElementById('resultadosBusqueda').style.display = 'none';
-    
-    // Mostrar información del producto seleccionado
-    document.getElementById('datosProducto').innerHTML = 
-        '<div class="row">' +
-        '<div class="col-md-4">' +
-        '<strong class="text-primary">Producto:</strong><br>' + 
-        productoActualSeleccionado.nombre + '<br>' +
-        '<small class="text-muted">Código: ' + productoActualSeleccionado.codigo + '</small>' +
-        '</div>' +
-        '<div class="col-md-4">' +
-        '<strong class="text-primary">Categoría:</strong><br>' + 
-        productoActualSeleccionado.categoria +
-        '</div>' +
-        '<div class="col-md-4">' +
-        '<strong class="text-primary">Stock Actual:</strong><br>' + 
-        '<span class="badge bg-info fs-6">' + productoActualSeleccionado.stock_actual + ' unidades</span>' +
-        '</div>' +
-        '</div>';
-    
-    document.getElementById('productoElegido').style.display = 'block';
-    
-    // Configurar formulario
-    document.getElementById('idProducto').value = productoActualSeleccionado.id;
-    document.getElementById('formularioCompleto').style.display = 'block';
-    
-    // Enfocar en el campo cantidad
-    setTimeout(function() {
-        document.getElementById('inputCantidad').focus();
-    }, 200);
-    
-    // Hacer scroll suave hacia el formulario
-    document.getElementById('formularioCompleto').scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start' 
-    });
-}
-
-// Función de validación antes de enviar
-function validarDatos() {
-    // Verificar que hay un producto seleccionado
-    if (!productoActualSeleccionado) {
-        alert('❌ Error: Debes seleccionar un producto primero');
-        document.getElementById('txtBusqueda').focus();
+function validarFormulario() {
+    if (!productoSeleccionado) {
+        alert('No se reconoció el producto. Vuelve atrás y selecciona uno.');
         return false;
     }
-    
-    // Verificar cantidad
-    var cantidad = document.getElementById('inputCantidad').value;
-    if (!cantidad || cantidad <= 0) {
-        alert('❌ Error: Debes ingresar una cantidad válida mayor a 0');
+    const cantidad = parseFloat(document.getElementById('inputCantidad').value || '0');
+    if (cantidad <= 0) {
+        alert('Ingresa una cantidad válida mayor a 0.');
         document.getElementById('inputCantidad').focus();
         return false;
     }
-    
-    // Verificar área
-    var area = document.getElementById('selectArea').value;
-    if (!area) {
-        alert('❌ Error: Debes seleccionar un área de almacenamiento');
+    if (!document.getElementById('selectArea').value) {
+        alert('Selecciona el área de almacenamiento.');
         document.getElementById('selectArea').focus();
         return false;
     }
-    
-    // Confirmación final
-    var areaTexto = document.getElementById('selectArea').options[document.getElementById('selectArea').selectedIndex].text;
-    var mensaje = '¿Confirmas agregar ' + cantidad + ' unidades de "' + productoActualSeleccionado.nombre + '"?\n\n';
-    mensaje += 'Área: ' + areaTexto;
-    
-    var precio = document.getElementById('inputPrecio').value;
-    if (precio && precio > 0) {
-        mensaje += '\nPrecio: $' + precio;
-    }
-    
-    return confirm(mensaje);
+    return confirm(`¿Confirmas agregar ${cantidad} unidades de "${productoSeleccionado.nombre}"?`);
 }
 
-// Función para limpiar todo el formulario
-function limpiarTodo() {
-    document.getElementById('txtBusqueda').value = '';
-    document.getElementById('resultadosBusqueda').style.display = 'none';
-    document.getElementById('productoElegido').style.display = 'none';
-    document.getElementById('formularioCompleto').style.display = 'none';
-    
-    // Resetear formulario
+function limpiarFormulario() {
     document.querySelector('form').reset();
     document.getElementById('inputFecha').value = '{{ fecha_hoy }}';
-    
-    productoActualSeleccionado = null;
-    document.getElementById('txtBusqueda').focus();
+    document.getElementById('inputCantidad').focus();
 }
 
-// Configurar eventos al cargar la página
-document.addEventListener('DOMContentLoaded', function() {
-    // Auto-focus en el campo de búsqueda
-    document.getElementById('txtBusqueda').focus();
-    
-    // Buscar mientras se escribe
-    document.getElementById('txtBusqueda').addEventListener('input', buscarProductos);
-    
-    // Buscar al presionar Enter
-    document.getElementById('txtBusqueda').addEventListener('keypress', function(event) {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            buscarProductos();
-        }
-    });
+document.addEventListener('DOMContentLoaded', () => {
+    const modalEl = document.getElementById('modalProveedores');
+    if (modalEl) {
+        modalProveedoresInstance = new bootstrap.Modal(modalEl);
+    }
 });
+
+function abrirModalProveedor() {
+    ocultarAlertaProveedor();
+    fetch("{% url 'inventario:api_entities' %}")
+        .then(validarRespuestaJson)
+        .then(data => {
+            if (data.success) {
+                proveedoresCache = data.proveedores || [];
+                renderizarListaProveedores();
+            } else {
+                mostrarAlertaProveedor(data.error || 'No se pudieron cargar los proveedores.');
+            }
+            modalProveedoresInstance.show();
+        })
+        .catch(err => {
+            mostrarAlertaProveedor(err.message || 'Error al cargar proveedores.');
+            modalProveedoresInstance.show();
+        });
+}
+
+function renderizarListaProveedores() {
+    const list = document.getElementById('listaProveedoresModal');
+    list.innerHTML = '';
+    if (!proveedoresCache.length) {
+        list.innerHTML = '<div class="text-center text-muted py-3">No hay proveedores registrados.</div>';
+        return;
+    }
+    proveedoresCache.forEach(prov => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item d-flex justify-content-between align-items-center';
+        item.innerHTML = `<div>${prov.nombre}</div>`;
+        const actions = document.createElement('div');
+        const useBtn = document.createElement('button');
+        useBtn.type = 'button';
+        useBtn.className = 'btn btn-sm btn-outline-success me-2';
+        useBtn.textContent = 'Usar';
+        useBtn.onclick = () => seleccionarProveedor(prov);
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn btn-sm btn-outline-danger';
+        delBtn.textContent = 'Eliminar';
+        delBtn.onclick = () => eliminarProveedorModal(prov.id, delBtn);
+        actions.appendChild(useBtn);
+        actions.appendChild(delBtn);
+        item.appendChild(actions);
+        list.appendChild(item);
+    });
+}
+
+function seleccionarProveedor(prov) {
+    const select = document.getElementById('selectProveedor');
+    let option = Array.from(select.options).find(opt => String(opt.value) === String(prov.id));
+    if (!option) {
+        option = new Option(prov.nombre, prov.id, true, true);
+        select.add(option);
+    }
+    select.value = String(prov.id);
+    select.dispatchEvent(new Event('change'));
+    modalProveedoresInstance.hide();
+}
+
+function crearProveedorModal() {
+    if (creandoProveedor) {
+        return;
+    }
+    ocultarAlertaProveedor();
+    const nombre = document.getElementById('inputNuevoProveedor').value.trim();
+    const rut = document.getElementById('inputNuevoRut').value.trim();
+    if (!nombre) {
+        mostrarAlertaProveedor('Ingresa el nombre del proveedor.');
+        return;
+    }
+    creandoProveedor = true;
+    setAgregarProveedorLoading(true);
+    postJson("{% url 'inventario:api_create_entity' %}", { type: 'proveedor', name: nombre, rut: rut })
+        .then(validarRespuestaJson)
+        .then(data => {
+            if (data.success) {
+                const nuevo = { id: data.id, nombre: data.nombre };
+                proveedoresCache.push(nuevo);
+                renderizarListaProveedores();
+                document.getElementById('inputNuevoProveedor').value = '';
+                document.getElementById('inputNuevoRut').value = '';
+                seleccionarProveedor(nuevo);
+            } else {
+                mostrarAlertaProveedor(data.error || 'No se pudo crear el proveedor.');
+            }
+        })
+        .catch(err => mostrarAlertaProveedor(err.message || 'Error al crear proveedor.'))
+        .finally(() => {
+            creandoProveedor = false;
+            setAgregarProveedorLoading(false);
+        });
+}
+
+function eliminarProveedorModal(id, buttonEl) {
+    if (!confirm('¿Eliminar este proveedor?')) {
+        return;
+    }
+    const originalHtml = buttonEl ? buttonEl.innerHTML : null;
+    if (buttonEl) {
+        buttonEl.disabled = true;
+        buttonEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    }
+    postJson("{% url 'inventario:api_delete_entity' %}", { type: 'proveedor', id })
+        .then(validarRespuestaJson)
+        .then(data => {
+            if (data.success) {
+                proveedoresCache = proveedoresCache.filter(p => p.id !== id);
+                const select = document.getElementById('selectProveedor');
+                Array.from(select.options).forEach(opt => { if (String(opt.value) === String(id)) opt.remove(); });
+                renderizarListaProveedores();
+            } else {
+                mostrarAlertaProveedor(data.error || 'No se pudo eliminar el proveedor.');
+            }
+        })
+        .catch(err => mostrarAlertaProveedor(err.message || 'Error al eliminar proveedor.'))
+        .finally(() => {
+            if (buttonEl) {
+                buttonEl.disabled = false;
+                buttonEl.innerHTML = originalHtml || 'Eliminar';
+            }
+        });
+}
+
+function mostrarAlertaProveedor(msg) {
+    const alert = document.getElementById('alertaProveedor');
+    alert.textContent = msg;
+    alert.classList.remove('d-none');
+}
+
+function ocultarAlertaProveedor() {
+    const alert = document.getElementById('alertaProveedor');
+    alert.textContent = '';
+    alert.classList.add('d-none');
+}
+
+function setAgregarProveedorLoading(loading) {
+    const btn = document.getElementById('btnAgregarProveedorModal');
+    if (!btn) return;
+    if (loading) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Agregando';
+    } else {
+        btn.disabled = false;
+        btn.textContent = 'Agregar';
+    }
+}
+
+function validarRespuestaJson(response) {
+    if (!response.ok) {
+        return response.text().then(text => { throw new Error(text || `Error ${response.status}`); });
+    }
+    const ct = response.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+        return response.text().then(text => { throw new Error('Respuesta inesperada del servidor: ' + text); });
+    }
+    return response.json();
+}
+
+function postJson(url, body) {
+    return fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': obtenerCookie('csrftoken')
+        },
+        body: JSON.stringify(body)
+    });
+}
+
+function obtenerCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 </script>
 {% endblock %}
