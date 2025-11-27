@@ -15,6 +15,7 @@ urlpatterns = [
     path('productos/<int:producto_id>/', views.detalle_producto, name='detalle_producto'),
     path('productos/nuevo/', views.agregar_producto, name='agregar_producto'),
     path('productos/<int:producto_id>/stock/', views.agregar_stock, name='agregar_stock'),
+    path('productos/<int:producto_id>/transferir/', views.transferir_stock, name='transferir_stock'),
     
     # Gestión de proveedores
     path('proveedores/nuevo/', views.agregar_proveedor, name='agregar_proveedor'),

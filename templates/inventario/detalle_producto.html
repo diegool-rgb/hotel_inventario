@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Detalle de Producto - {{ producto.nombre }}{% endblock %}
 
@@ -6,7 +7,7 @@
 <div class="container-fluid px-4">
     <div class="row mb-4">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center fade-in-up">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 fade-in-up">
                 <div>
                     <h1 class="display-6 fw-bold mb-2">
                         <i class="bi bi-box-seam me-3 text-primary"></i>
@@ -14,7 +15,13 @@
                     </h1>
                     <p class="text-muted mb-0">Código: <strong>{{ producto.codigo }}</strong> | Categoría: <span class="badge bg-light text-dark">{{ producto.categoria.nombre }}</span></p>
                 </div>
-                <div>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'inventario:transferir_stock' producto.id %}" class="btn btn-primary btn-modern">
+                        <i class="bi bi-arrow-left-right me-2"></i>Mover stock
+                    </a>
+                    <a href="{% url 'inventario:entrada_stock' %}?producto={{ producto.id }}" class="btn btn-success btn-modern">
+                        <i class="bi bi-plus-circle me-2"></i>Agregar stock
+                    </a>
                     <a href="{% url 'inventario:productos' %}" class="btn btn-outline-secondary btn-modern">
                         <i class="bi bi-arrow-left me-2"></i>Volver a Productos
                     </a>
@@ -33,7 +40,10 @@
                         <li class="list-group-item"><strong>Nombre:</strong> {{ producto.nombre }}</li>
                         <li class="list-group-item"><strong>Categoría:</strong> {{ producto.categoria.nombre }}</li>
                         <li class="list-group-item"><strong>Unidad de Medida:</strong> {{ producto.get_unidad_medida_display }}</li>
-                        <li class="list-group-item"><strong>Stock Mínimo:</strong> {{ producto.stock_minimo }}</li>
+                        <li class="list-group-item"><strong>Stock Mínimo:</strong> {{ producto.stock_minimo }} {{ producto.get_unidad_medida_display }}</li>
+                        <li class="list-group-item"><strong>Stock Actual:</strong> {{ stock_total }} {{ producto.get_unidad_medida_display }}</li>
+                        <li class="list-group-item"><strong>Último proveedor:</strong> {% if ultimo_proveedor %}{{ ultimo_proveedor.nombre }}{% else %}<span class="text-muted">Sin historial</span>{% endif %}</li>
+                        <li class="list-group-item"><strong>Último movimiento:</strong> {% if ultimo_movimiento_fecha %}{{ ultimo_movimiento_fecha|date:"d/m/Y H:i" }}{% else %}<span class="text-muted">Sin registros</span>{% endif %}</li>
                         <li class="list-group-item"><strong>Precio Unitario:</strong> {% if producto.precio_unitario %}${{ producto.precio_unitario|floatformat:0 }}{% else %}N/A{% endif %}</li>
                         <li class="list-group-item"><strong>Activo:</strong> {% if producto.activo %}<span class="badge bg-success">Sí</span>{% else %}<span class="badge bg-danger">No</span>{% endif %}</li>
                         <li class="list-group-item"><strong>Descripción:</strong> {{ producto.descripcion|default:'-' }}</li>
@@ -49,7 +59,10 @@
                     <ul class="list-group list-group-flush">
                         {% for stock in stocks %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-geo-alt me-2 text-primary"></i>{{ stock.area.nombre }}</span>
+                            <div>
+                                <span><i class="bi bi-geo-alt me-2 text-primary"></i>{{ stock.area.nombre }}</span>
+                                <div class="small text-muted">Actualizado: {{ stock.fecha_actualizacion|date:"d/m/Y H:i" }}</div>
+                            </div>
                             <span class="fw-bold">{{ stock.cantidad }} {{ producto.get_unidad_medida_display }}</span>
                         </li>
                         {% endfor %}
@@ -84,6 +97,10 @@
                                         {{ mov.get_tipo_display }}
                                     </span>
                                     <span class="ms-2">{{ mov.cantidad }} {{ producto.get_unidad_medida_display }}</span>
+                                    <div class="small text-muted mt-1">
+                                        {% if mov.area_origen %}De: {{ mov.area_origen.nombre }}{% endif %}
+                                        {% if mov.area_destino %}{% if mov.area_origen %} · {% endif %}Para: {{ mov.area_destino.nombre }}{% endif %}
+                                    </div>
                                 </div>
                                 <div class="text-end">
                                     <small class="text-muted">{{ mov.fecha|date:"d/m/Y H:i" }}</small><br>
@@ -103,5 +120,55 @@
             </div>
         </div>
     </div>
+
+        <div class="row g-4 mt-1">
+            <div class="col-12 fade-in-up">
+                <div class="card card-modern">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0"><i class="bi bi-receipt-cutoff me-2 text-primary"></i>Historial de compras y precios</h5>
+                            <span class="text-muted small">Registro completo de entradas para este producto</span>
+                        </div>
+                        {% if compras_historial %}
+                        <div class="table-responsive">
+                            <table class="table table-professional table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Proveedor</th>
+                                        <th>Área destino</th>
+                                        <th class="text-end">Cantidad</th>
+                                        <th class="text-end">Precio unitario</th>
+                                        <th class="text-end">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for detalle in compras_historial %}
+                                    <tr>
+                                        <td>{{ detalle.entrada.fecha_compra|date:"d/m/Y" }}</td>
+                                        <td>{{ detalle.entrada.proveedor.nombre|default:'-' }}</td>
+                                        <td>{{ detalle.area_destino.nombre }}</td>
+                                        <td class="text-end">{{ detalle.cantidad }} {{ producto.get_unidad_medida_display }}</td>
+                                        <td class="text-end">
+                                            {% if detalle.precio_unitario %}${{ detalle.precio_unitario|floatformat:0|intcomma }}{% else %}<span class="text-muted">N/A</span>{% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if detalle.subtotal %}${{ detalle.subtotal|floatformat:0|intcomma }}{% else %}<span class="text-muted">-</span>{% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0">Aún no se registran compras para este producto.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
 </div>
 {% endblock %}

@@ -37,6 +37,7 @@ ALLOWED_HOSTS = [
     '192.168.1.5', '192.168.1.4',
     # Dominio de producción en PythonAnywhere (ajusta con tu usuario)
     'diegoo17.pythonanywhere.com',
+    '.onrender.com',
 ]
 
 # Si más adelante activas HTTPS en producción, agrega el origen aquí para formularios/CSRF

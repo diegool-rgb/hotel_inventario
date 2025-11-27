@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Mover stock - {{ producto.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Mover stock para {{ producto.nombre }}</h1>
+            <p class="text-muted mb-0">Selecciona el área de origen y destino para transferir unidades de este producto.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'inventario:detalle_producto' producto.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Volver al detalle
+            </a>
+        </div>
+    </div>
+
+    {% if not areas_origen %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Este producto no tiene stock disponible en ninguna área. Ingresa stock antes de intentar moverlo.
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-arrow-left-right me-2 text-primary"></i>Transferencia interna</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="areaOrigenSelect" class="form-label fw-semibold">Área de origen</label>
+                            <select class="form-select" id="areaOrigenSelect" name="area_origen" {% if not areas_origen %}disabled{% endif %} required>
+                                <option value="">Selecciona un área</option>
+                                {% for stock in areas_origen %}
+                                <option value="{{ stock.area.id }}" data-stock="{{ stock.cantidad }}">
+                                    {{ stock.area.nombre }} — Disponible: {{ stock.cantidad }} {{ producto.get_unidad_medida_display }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small id="stockDisponibleTexto" class="text-muted d-block mt-1">Selecciona un área para ver el stock disponible.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="areaDestinoSelect" class="form-label fw-semibold">Área de destino</label>
+                            <div class="d-flex align-items-start gap-2">
+                                <select class="form-select" id="areaDestinoSelect" name="area_destino" required>
+                                    <option value="">Selecciona un área destino</option>
+                                    {% for area in areas_destino %}
+                                    <option value="{{ area.id }}">{{ area.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="button" class="btn btn-outline-secondary" onclick="openManageModal('area')">
+                                    <i class="bi bi-tools"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Puedes crear una nueva área con el botón "herramientas".</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Cantidad a mover</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" name="cantidad" min="0.01" step="0.01" placeholder="0.00" {% if not areas_origen %}disabled{% endif %} required>
+                                <span class="input-group-text">{{ producto.get_unidad_medida_display }}</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Notas (opcional)</label>
+                            <textarea class="form-control" name="observaciones" rows="2" placeholder="Motivo o referencia interna"></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'inventario:detalle_producto' producto.id %}" class="btn btn-light">Cancelar</a>
+                            <button type="submit" class="btn btn-primary" {% if not areas_origen %}disabled{% endif %}>
+                                <i class="bi bi-arrow-repeat me-1"></i> Mover stock
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase mb-3">Resumen rápido</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Stock total</span>
+                        <span class="fw-bold">{{ stock_total }} {{ producto.get_unidad_medida_display }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Stock mínimo</span>
+                        <span class="fw-bold">{{ producto.stock_minimo }} {{ producto.get_unidad_medida_display }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Áreas con stock</span>
+                        <span class="fw-bold">{{ areas_origen|length }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase mb-3">Distribución actual</h6>
+                    {% if stocks %}
+                    <div class="list-group list-group-flush">
+                        {% for stock in stocks %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <div class="fw-semibold">{{ stock.area.nombre }}</div>
+                                <small class="text-muted">Actualizado el {{ stock.fecha_actualizacion|date:"d/m/Y H:i" }}</small>
+                            </div>
+                            <span class="badge bg-light text-dark">{{ stock.cantidad }} {{ producto.get_unidad_medida_display }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No hay stock registrado para este producto.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const origenSelect = document.getElementById('areaOrigenSelect');
+    const infoLabel = document.getElementById('stockDisponibleTexto');
+    function updateDisponible() {
+        if (!origenSelect) return;
+        const option = origenSelect.options[origenSelect.selectedIndex];
+        if (option && option.dataset.stock) {
+            infoLabel.textContent = `Disponible: ${option.dataset.stock} {{ producto.get_unidad_medida_display }}`;
+        } else {
+            infoLabel.textContent = 'Selecciona un área para ver el stock disponible.';
+        }
+    }
+    if (origenSelect) {
+        origenSelect.addEventListener('change', updateDisponible);
+        updateDisponible();
+    }
+})();
+</script>
+
+{% include 'inventario/includes/manage_entities_modal.html' with modal_id='transferManageAreaModal' proveedor_select_id='' area_select_id='areaDestinoSelect' show_area_tab=True show_proveedor_tab=False area_tipos=area_tipos %}
+{% endblock %}

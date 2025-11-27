@@ -224,10 +224,19 @@ def lista_productos(request):
 def detalle_producto(request, producto_id):
     """Vista de detalle de un producto"""
     producto = get_object_or_404(Producto, id=producto_id, activo=True)
-    stocks = Stock.objects.select_related('area').filter(producto=producto)
+    stocks = Stock.objects.select_related('area').filter(producto=producto).order_by('area__nombre')
     movimientos = Movimiento.objects.select_related(
         'area_origen', 'area_destino', 'usuario'
     ).filter(producto=producto).order_by('-fecha')[:20]
+
+    ultima_compra = DetalleEntradaStock.objects.select_related('entrada__proveedor').filter(
+        producto=producto
+    ).order_by('-entrada__fecha_compra').first()
+    ultimo_proveedor = ultima_compra.entrada.proveedor if ultima_compra and ultima_compra.entrada and ultima_compra.entrada.proveedor else None
+    ultimo_movimiento_fecha = movimientos[0].fecha if movimientos else None
+    compras_historial = DetalleEntradaStock.objects.select_related('entrada__proveedor', 'area_destino').filter(
+        producto=producto
+    ).order_by('-entrada__fecha_compra', '-entrada__id')
     
     context = {
         'producto': producto,
@@ -235,6 +244,9 @@ def detalle_producto(request, producto_id):
         'movimientos': movimientos,
         'stock_total': producto.stock_total(),
         'tiene_stock_bajo': producto.tiene_stock_bajo(),
+        'ultimo_proveedor': ultimo_proveedor,
+        'ultimo_movimiento_fecha': ultimo_movimiento_fecha,
+        'compras_historial': compras_historial,
     }
     
     return render(request, 'inventario/detalle_producto.html', context)
@@ -846,6 +858,7 @@ def entrada_stock(request):
         'fecha_hoy': date.today().isoformat(),
         'proximo_numero_entrada': proximo_numero,
         'producto_seleccionada': producto_seleccionada,
+        'area_tipos': Area.TIPOS_AREA,
     }
     return render(request, 'inventario/entrada_stock.html', context)
 
@@ -1163,6 +1176,88 @@ def salida_stock(request):
 
 @login_required
 @ensure_csrf_cookie
+def transferir_stock(request, producto_id):
+    """Mueve stock de un área a otra manteniendo trazabilidad."""
+    producto = get_object_or_404(Producto, id=producto_id, activo=True)
+    stocks = Stock.objects.select_related('area').filter(producto=producto).order_by('area__nombre')
+    areas = Area.objects.filter(activo=True).order_by('nombre')
+    areas_origen = [s for s in stocks if s.cantidad > 0]
+
+    if request.method == 'POST':
+        area_origen_id = request.POST.get('area_origen')
+        area_destino_id = request.POST.get('area_destino')
+        cantidad = request.POST.get('cantidad')
+        observaciones = request.POST.get('observaciones', '').strip()
+
+        if not area_origen_id or not area_destino_id or not cantidad:
+            messages.error(request, 'Debes seleccionar el área de origen, el área destino y la cantidad a mover.')
+        elif area_origen_id == area_destino_id:
+            messages.error(request, 'El área de origen y destino deben ser distintas.')
+        else:
+            try:
+                cantidad_dec = Decimal(str(cantidad))
+            except Exception:
+                messages.error(request, 'Ingresa una cantidad válida.')
+                return redirect('inventario:transferir_stock', producto_id=producto.id)
+
+            if cantidad_dec <= 0:
+                messages.error(request, 'La cantidad debe ser mayor a 0.')
+                return redirect('inventario:transferir_stock', producto_id=producto.id)
+
+            try:
+                with transaction.atomic():
+                    stock_origen = Stock.objects.select_for_update().get(producto=producto, area_id=area_origen_id)
+                    if stock_origen.cantidad < cantidad_dec:
+                        messages.error(request, f'El área {stock_origen.area.nombre} no tiene suficiente stock disponible.')
+                        return redirect('inventario:transferir_stock', producto_id=producto.id)
+
+                    stock_destino = Stock.objects.select_for_update().filter(producto=producto, area_id=area_destino_id).first()
+                    if stock_destino is None:
+                        area_destino = Area.objects.get(id=area_destino_id)
+                        stock_destino = Stock.objects.create(producto=producto, area=area_destino, cantidad=Decimal('0'))
+                    else:
+                        area_destino = stock_destino.area
+
+                    stock_origen.cantidad -= cantidad_dec
+                    stock_origen.save()
+
+                    stock_destino.cantidad += cantidad_dec
+                    stock_destino.save()
+
+                    Movimiento.objects.create(
+                        producto=producto,
+                        area_origen=stock_origen.area,
+                        area_destino=area_destino,
+                        tipo='TRANSFERENCIA',
+                        motivo='TRANSFERENCIA',
+                        cantidad=cantidad_dec,
+                        usuario=request.user,
+                        observaciones=observaciones or f'Transferencia interna {stock_origen.area.nombre} ➜ {area_destino.nombre}'
+                    )
+
+                messages.success(request, f'Se movieron {cantidad_dec} {producto.unidad_medida} desde {stock_origen.area.nombre} hacia {area_destino.nombre}.')
+                return redirect('inventario:detalle_producto', producto_id=producto.id)
+
+            except Stock.DoesNotExist:
+                messages.error(request, 'No encontramos stock en el área de origen seleccionada.')
+            except Area.DoesNotExist:
+                messages.error(request, 'El área destino seleccionada no existe.')
+            except Exception as e:
+                messages.error(request, f'No se pudo completar la transferencia: {str(e)}')
+
+    context = {
+        'producto': producto,
+        'stocks': stocks,
+        'areas_origen': areas_origen,
+        'areas_destino': areas,
+        'stock_total': producto.stock_total(),
+        'area_tipos': Area.TIPOS_AREA,
+    }
+    return render(request, 'inventario/transferir_stock.html', context)
+
+
+@login_required
+@ensure_csrf_cookie
 def entrada_stock_simple(request):
     """Vista simplificada para entrada de stock con interfaz de cards"""
     from datetime import date
@@ -1298,6 +1393,7 @@ def entrada_stock_simple(request):
         'fecha_hoy': date.today().isoformat(),
         'proximo_numero': proximo_numero,
         'producto_preseleccionado': producto_preseleccionado,
+        'area_tipos': Area.TIPOS_AREA,
     }
     return render(request, 'inventario/entrada_stock_simple.html', context)
 

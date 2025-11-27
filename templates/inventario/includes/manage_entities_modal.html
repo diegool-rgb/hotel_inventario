@@ -5,11 +5,13 @@ Parameters:
 - proveedor_select_id: DOM id of the proveedor <select>
 - area_select_id: DOM id of the área <select> (optional)
 - show_area_tab: boolean to display the Áreas tab
+- show_proveedor_tab: boolean to display the Proveedores tab (default True)
 - area_tipos: iterable with area type choices (required when show_area_tab)
 {% endcomment %}
 {% with modal_id=modal_id|default:'manageEntitiesModal' %}
 {% with proveedor_list_id=modal_id|add:'-proveedorList' area_list_id=modal_id|add:'-areaList' %}
 {% with proveedor_name_id=modal_id|add:'-newProveedorName' proveedor_rut_id=modal_id|add:'-newProveedorRut' area_name_id=modal_id|add:'-newAreaName' area_tipo_id=modal_id|add:'-newAreaTipo' tab_proveedor_id=modal_id|add:'-tab-proveedor' tab_area_id=modal_id|add:'-tab-area' pane_proveedor_id=modal_id|add:'-tabProveedorPane' pane_area_id=modal_id|add:'-tabAreaPane' %}
+{% with show_proveedor_tab=show_proveedor_tab|default:True %}
 <div class="modal fade" id="{{ modal_id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
@@ -19,18 +21,21 @@ Parameters:
             </div>
             <div class="modal-body">
                 <ul class="nav nav-tabs mb-3" role="tablist">
+                    {% if show_proveedor_tab %}
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="{{ tab_proveedor_id }}" data-bs-toggle="tab" data-bs-target="#{{ pane_proveedor_id }}" type="button" role="tab">Proveedores</button>
+                        <button class="nav-link{% if show_proveedor_tab %} active{% endif %}" id="{{ tab_proveedor_id }}" data-bs-toggle="tab" data-bs-target="#{{ pane_proveedor_id }}" type="button" role="tab">Proveedores</button>
                     </li>
+                    {% endif %}
                     {% if show_area_tab %}
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="{{ tab_area_id }}" data-bs-toggle="tab" data-bs-target="#{{ pane_area_id }}" type="button" role="tab">Áreas</button>
+                        <button class="nav-link{% if not show_proveedor_tab %} active{% endif %}" id="{{ tab_area_id }}" data-bs-toggle="tab" data-bs-target="#{{ pane_area_id }}" type="button" role="tab">Áreas</button>
                     </li>
                     {% endif %}
                 </ul>
 
                 <div class="tab-content">
-                    <div class="tab-pane fade show active" id="{{ pane_proveedor_id }}" role="tabpanel">
+                    {% if show_proveedor_tab %}
+                    <div class="tab-pane fade{% if show_proveedor_tab %} show active{% endif %}" id="{{ pane_proveedor_id }}" role="tabpanel">
                         <div id="{{ proveedor_list_id }}" class="list-group mb-3"></div>
                         <div class="row g-2">
                             <div class="col-md-7">
@@ -44,9 +49,10 @@ Parameters:
                             </div>
                         </div>
                     </div>
+                    {% endif %}
 
                     {% if show_area_tab %}
-                    <div class="tab-pane fade" id="{{ pane_area_id }}" role="tabpanel">
+                    <div class="tab-pane fade{% if not show_proveedor_tab %} show active{% endif %}" id="{{ pane_area_id }}" role="tabpanel">
                         <div id="{{ area_list_id }}" class="list-group mb-3"></div>
                         <div class="row g-2">
                             <div class="col-md-6">
@@ -80,6 +86,7 @@ Parameters:
         modalId: '{{ modal_id }}',
         proveedorSelectId: '{{ proveedor_select_id }}',
         areaSelectId: '{{ area_select_id|default:'' }}',
+        hasProveedorTab: {{ show_proveedor_tab|default:True|yesno:'true,false' }},
         hasAreaTab: {{ show_area_tab|default:False|yesno:'true,false' }},
         ids: {
             proveedorList: '{{ proveedor_list_id }}',
@@ -108,7 +115,9 @@ Parameters:
             .then(handleJsonResponse)
             .then(data => {
                 if (data && data.success) {
-                    syncSelect('proveedor', data.proveedores);
+                    if (modalConfig.hasProveedorTab) {
+                        syncSelect('proveedor', data.proveedores);
+                    }
                     if (modalConfig.hasAreaTab) {
                         syncSelect('area', data.areas);
                     }
@@ -138,6 +147,12 @@ Parameters:
     }
 
     function populateList(type) {
+        if (type === 'proveedor' && !modalConfig.hasProveedorTab) {
+            return;
+        }
+        if (type === 'area' && !modalConfig.hasAreaTab) {
+            return;
+        }
         const listId = type === 'proveedor' ? modalConfig.ids.proveedorList : modalConfig.ids.areaList;
         const selectId = type === 'proveedor' ? modalConfig.proveedorSelectId : modalConfig.areaSelectId;
         const listEl = document.getElementById(listId);
@@ -206,6 +221,14 @@ Parameters:
 
     function manageEntitiesAdd(type) {
         const isProveedor = type === 'proveedor';
+        if (isProveedor && !modalConfig.hasProveedorTab) {
+            alert('La pestaña de proveedores no está disponible en este formulario.');
+            return;
+        }
+        if (!isProveedor && !modalConfig.hasAreaTab) {
+            alert('La pestaña de áreas no está disponible en este formulario.');
+            return;
+        }
         const inputId = isProveedor ? modalConfig.ids.proveedorName : modalConfig.ids.areaName;
         const nameInput = document.getElementById(inputId);
         if (!nameInput) return;
@@ -268,6 +291,12 @@ Parameters:
     }
 
     function removeEntity(type, value) {
+        if (type === 'proveedor' && !modalConfig.hasProveedorTab) {
+            return;
+        }
+        if (type === 'area' && !modalConfig.hasAreaTab) {
+            return;
+        }
         if (!confirm('Eliminar elemento seleccionado? Esta acción lo desactivará en el sistema.')) return;
         fetch('{% url "inventario:api_delete_entity" %}', {
             method: 'POST',
@@ -292,7 +321,12 @@ Parameters:
     }
 
     window.openManageModal = function(type) {
-        const selectedType = (type === 'area' && modalConfig.hasAreaTab) ? 'area' : 'proveedor';
+        let selectedType = 'proveedor';
+        if (type === 'area' && modalConfig.hasAreaTab) {
+            selectedType = 'area';
+        } else if (!modalConfig.hasProveedorTab && modalConfig.hasAreaTab) {
+            selectedType = 'area';
+        }
         const tabSelector = selectedType === 'proveedor' ? `#${modalConfig.ids.tabProveedor}` : `#${modalConfig.ids.tabArea}`;
         const tabTrigger = document.querySelector(tabSelector);
         if (tabTrigger) {
@@ -305,6 +339,7 @@ Parameters:
     window.manageEntitiesAdd = manageEntitiesAdd;
 })();
 </script>
+{% endwith %}
 {% endwith %}
 {% endwith %}
 {% endwith %}

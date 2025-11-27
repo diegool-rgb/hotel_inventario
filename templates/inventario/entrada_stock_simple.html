@@ -56,12 +56,17 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold text-primary"><i class="bi bi-geo-alt"></i> Área de almacenamiento *</label>
-                            <select class="form-select form-control-lg" name="area" id="selectArea" required>
-                                <option value="">Selecciona el área</option>
-                                {% for area in areas %}
-                                    <option value="{{ area.id }}" {% if producto_preseleccionado.ultima_area and area.id == producto_preseleccionado.ultima_area.id %}selected{% endif %}>{{ area.nombre }}</option>
-                                {% endfor %}
-                            </select>
+                            <div class="d-flex align-items-start gap-2">
+                                <select class="form-select form-control-lg" name="area" id="selectArea" required>
+                                    <option value="">Selecciona el área</option>
+                                    {% for area in areas %}
+                                        <option value="{{ area.id }}" {% if producto_preseleccionado.ultima_area and area.id == producto_preseleccionado.ultima_area.id %}selected{% endif %}>{{ area.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="button" class="btn btn-outline-secondary" onclick="openManageModal('area')">
+                                    <i class="bi bi-tools"></i>
+                                </button>
+                            </div>
                             <small class="text-muted">¿Dónde guardaste el producto?</small>
                         </div>
                         <div class="col-md-4 mb-3">
@@ -73,7 +78,7 @@
                                         <option value="{{ proveedor.id }}" {% if producto_preseleccionado.ultimo_proveedor and proveedor.id == producto_preseleccionado.ultimo_proveedor.id %}selected{% endif %}>{{ proveedor.nombre }}</option>
                                     {% endfor %}
                                 </select>
-                                <button type="button" class="btn btn-outline-secondary" onclick="abrirModalProveedor()">
+                                <button type="button" class="btn btn-outline-secondary" onclick="openManageModal('proveedor')">
                                     <i class="bi bi-tools"></i>
                                 </button>
                             </div>
@@ -104,44 +109,11 @@
     {% endif %}
 </div>
 
-<!-- Modal gestionar proveedores -->
-<div class="modal fade" id="modalProveedores" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-tools me-2"></i>Gestionar proveedores</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body">
-                <div id="listaProveedoresModal" class="list-group mb-3"></div>
-                <div class="row g-2">
-                    <div class="col-md-7">
-                        <input type="text" id="inputNuevoProveedor" class="form-control" placeholder="Nombre del proveedor">
-                    </div>
-                    <div class="col-md-3">
-                        <input type="text" id="inputNuevoRut" class="form-control" placeholder="RUT opcional">
-                    </div>
-                    <div class="col-md-2">
-                        <button type="button" id="btnAgregarProveedorModal" class="btn btn-primary w-100" onclick="crearProveedorModal()">Agregar</button>
-                    </div>
-                </div>
-                <div id="alertaProveedor" class="alert alert-danger mt-3 d-none"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
 const productoSeleccionado = {% if producto_preseleccionado %}{
     id: {{ producto_preseleccionado.id }},
     nombre: "{{ producto_preseleccionado.nombre|escapejs }}"
 }{% else %}null{% endif %};
-let modalProveedoresInstance = null;
-let proveedoresCache = [];
-let creandoProveedor = false;
 
 function validarFormulario() {
     if (!productoSeleccionado) {
@@ -167,197 +139,7 @@ function limpiarFormulario() {
     document.getElementById('inputFecha').value = '{{ fecha_hoy }}';
     document.getElementById('inputCantidad').focus();
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    const modalEl = document.getElementById('modalProveedores');
-    if (modalEl) {
-        modalProveedoresInstance = new bootstrap.Modal(modalEl);
-    }
-});
-
-function abrirModalProveedor() {
-    ocultarAlertaProveedor();
-    fetch("{% url 'inventario:api_entities' %}")
-        .then(validarRespuestaJson)
-        .then(data => {
-            if (data.success) {
-                proveedoresCache = data.proveedores || [];
-                renderizarListaProveedores();
-            } else {
-                mostrarAlertaProveedor(data.error || 'No se pudieron cargar los proveedores.');
-            }
-            modalProveedoresInstance.show();
-        })
-        .catch(err => {
-            mostrarAlertaProveedor(err.message || 'Error al cargar proveedores.');
-            modalProveedoresInstance.show();
-        });
-}
-
-function renderizarListaProveedores() {
-    const list = document.getElementById('listaProveedoresModal');
-    list.innerHTML = '';
-    if (!proveedoresCache.length) {
-        list.innerHTML = '<div class="text-center text-muted py-3">No hay proveedores registrados.</div>';
-        return;
-    }
-    proveedoresCache.forEach(prov => {
-        const item = document.createElement('div');
-        item.className = 'list-group-item d-flex justify-content-between align-items-center';
-        item.innerHTML = `<div>${prov.nombre}</div>`;
-        const actions = document.createElement('div');
-        const useBtn = document.createElement('button');
-        useBtn.type = 'button';
-        useBtn.className = 'btn btn-sm btn-outline-success me-2';
-        useBtn.textContent = 'Usar';
-        useBtn.onclick = () => seleccionarProveedor(prov);
-        const delBtn = document.createElement('button');
-        delBtn.type = 'button';
-        delBtn.className = 'btn btn-sm btn-outline-danger';
-        delBtn.textContent = 'Eliminar';
-        delBtn.onclick = () => eliminarProveedorModal(prov.id, delBtn);
-        actions.appendChild(useBtn);
-        actions.appendChild(delBtn);
-        item.appendChild(actions);
-        list.appendChild(item);
-    });
-}
-
-function seleccionarProveedor(prov) {
-    const select = document.getElementById('selectProveedor');
-    let option = Array.from(select.options).find(opt => String(opt.value) === String(prov.id));
-    if (!option) {
-        option = new Option(prov.nombre, prov.id, true, true);
-        select.add(option);
-    }
-    select.value = String(prov.id);
-    select.dispatchEvent(new Event('change'));
-    modalProveedoresInstance.hide();
-}
-
-function crearProveedorModal() {
-    if (creandoProveedor) {
-        return;
-    }
-    ocultarAlertaProveedor();
-    const nombre = document.getElementById('inputNuevoProveedor').value.trim();
-    const rut = document.getElementById('inputNuevoRut').value.trim();
-    if (!nombre) {
-        mostrarAlertaProveedor('Ingresa el nombre del proveedor.');
-        return;
-    }
-    creandoProveedor = true;
-    setAgregarProveedorLoading(true);
-    postJson("{% url 'inventario:api_create_entity' %}", { type: 'proveedor', name: nombre, rut: rut })
-        .then(validarRespuestaJson)
-        .then(data => {
-            if (data.success) {
-                const nuevo = { id: data.id, nombre: data.nombre };
-                proveedoresCache.push(nuevo);
-                renderizarListaProveedores();
-                document.getElementById('inputNuevoProveedor').value = '';
-                document.getElementById('inputNuevoRut').value = '';
-                seleccionarProveedor(nuevo);
-            } else {
-                mostrarAlertaProveedor(data.error || 'No se pudo crear el proveedor.');
-            }
-        })
-        .catch(err => mostrarAlertaProveedor(err.message || 'Error al crear proveedor.'))
-        .finally(() => {
-            creandoProveedor = false;
-            setAgregarProveedorLoading(false);
-        });
-}
-
-function eliminarProveedorModal(id, buttonEl) {
-    if (!confirm('¿Eliminar este proveedor?')) {
-        return;
-    }
-    const originalHtml = buttonEl ? buttonEl.innerHTML : null;
-    if (buttonEl) {
-        buttonEl.disabled = true;
-        buttonEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-    }
-    postJson("{% url 'inventario:api_delete_entity' %}", { type: 'proveedor', id })
-        .then(validarRespuestaJson)
-        .then(data => {
-            if (data.success) {
-                proveedoresCache = proveedoresCache.filter(p => p.id !== id);
-                const select = document.getElementById('selectProveedor');
-                Array.from(select.options).forEach(opt => { if (String(opt.value) === String(id)) opt.remove(); });
-                renderizarListaProveedores();
-            } else {
-                mostrarAlertaProveedor(data.error || 'No se pudo eliminar el proveedor.');
-            }
-        })
-        .catch(err => mostrarAlertaProveedor(err.message || 'Error al eliminar proveedor.'))
-        .finally(() => {
-            if (buttonEl) {
-                buttonEl.disabled = false;
-                buttonEl.innerHTML = originalHtml || 'Eliminar';
-            }
-        });
-}
-
-function mostrarAlertaProveedor(msg) {
-    const alert = document.getElementById('alertaProveedor');
-    alert.textContent = msg;
-    alert.classList.remove('d-none');
-}
-
-function ocultarAlertaProveedor() {
-    const alert = document.getElementById('alertaProveedor');
-    alert.textContent = '';
-    alert.classList.add('d-none');
-}
-
-function setAgregarProveedorLoading(loading) {
-    const btn = document.getElementById('btnAgregarProveedorModal');
-    if (!btn) return;
-    if (loading) {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Agregando';
-    } else {
-        btn.disabled = false;
-        btn.textContent = 'Agregar';
-    }
-}
-
-function validarRespuestaJson(response) {
-    if (!response.ok) {
-        return response.text().then(text => { throw new Error(text || `Error ${response.status}`); });
-    }
-    const ct = response.headers.get('content-type') || '';
-    if (!ct.includes('application/json')) {
-        return response.text().then(text => { throw new Error('Respuesta inesperada del servidor: ' + text); });
-    }
-    return response.json();
-}
-
-function postJson(url, body) {
-    return fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': obtenerCookie('csrftoken')
-        },
-        body: JSON.stringify(body)
-    });
-}
-
-function obtenerCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-            cookie = cookie.trim();
-            if (cookie.startsWith(name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
 </script>
+
+{% include 'inventario/includes/manage_entities_modal.html' with modal_id='manageEntitiesModalSimple' proveedor_select_id='selectProveedor' area_select_id='selectArea' show_area_tab=True area_tipos=area_tipos %}
 {% endblock %}
